@@ -1,17 +1,39 @@
-import { Router, Request, Response } from 'express'
-import { authenticate } from '../middleware/auth.middleware.js'
+import { Router, Request, Response, NextFunction } from 'express'
 import { AgentActionService } from '../services/agent-action.service.js'
+import { AuthService } from '../services/auth.service.js'
 
 const router = Router()
 const agentActionService = new AgentActionService()
+const authService = new AuthService()
+
+/**
+ * Custom auth middleware for SSE (supports token in query param)
+ */
+const authenticateSSE = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    // Try to get token from query parameter (for SSE)
+    const token = (req.query.token as string) || req.headers.authorization?.replace('Bearer ', '')
+
+    if (!token) {
+      res.status(401).json({ success: false, error: 'Unauthorized' })
+      return
+    }
+
+    const decoded = authService.verifyToken(token)
+    ;(req as any).userId = decoded.userId
+    next()
+  } catch (error) {
+    res.status(401).json({ success: false, error: 'Invalid token' })
+  }
+}
 
 /**
  * Server-Sent Events (SSE) endpoint for real-time agent action updates
- * GET /api/realtime/agent/:agentId
+ * GET /api/realtime/agent/:agentId?token=xxx
  */
 router.get(
   '/agent/:agentId',
-  authenticate,
+  authenticateSSE,
   async (req: Request, res: Response): Promise<void> => {
     const { agentId } = req.params
 

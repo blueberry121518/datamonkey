@@ -1,0 +1,227 @@
+.endpoint-modal-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  max-height: calc(90vh - 120px);
+  overflow-y: auto;
+}
+
+.modal-info-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.5rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.info-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.info-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  min-width: 120px;
+}
+
+.info-value {
+  font-size: 14px;
+  color: var(--text-primary);
+  flex: 1;
+  word-break: break-word;
+}
+
+.info-value code {
+  font-family: 'Monaco', 'Courier New', monospace;
+  background: var(--background);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+}
+
+.modal-data-section,
+.modal-interactions-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.section-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.data-viewer {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  overflow: auto;
+  max-height: 500px;
+}
+
+.data-json {
+  margin: 0;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.6;
+}
+
+.data-viewer::-webkit-scrollbar,
+.endpoint-modal-content::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.data-viewer::-webkit-scrollbar-track,
+.endpoint-modal-content::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+
+.data-viewer::-webkit-scrollbar-thumb,
+.endpoint-modal-content::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+.data-viewer::-webkit-scrollbar-thumb:hover,
+.endpoint-modal-content::-webkit-scrollbar-thumb:hover {
+  background: var(--surface);
+}
+
+.notification-terminal {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 0.75rem;
+  max-height: 400px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+.terminal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.terminal-title {
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+.terminal-content {
+  padding: 1rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  max-height: 350px;
+  background: var(--bg);
+}
+
+.terminal-line {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.25rem 0;
+  line-height: 1.5;
+}
+
+.terminal-timestamp {
+  color: var(--text-secondary);
+  min-width: 80px;
+  font-size: 0.7rem;
+  font-weight: 500;
+}
+
+.terminal-message {
+  flex: 1;
+  word-break: break-word;
+  color: var(--text-primary);
+}
+
+.terminal-line.info .terminal-message {
+  color: var(--text-primary);
+}
+
+.terminal-line.success .terminal-message {
+  color: var(--accent-mint);
+}
+
+.terminal-line.error .terminal-message {
+  color: var(--accent-neon);
+}
+
+.terminal-line.warning .terminal-message {
+  color: #fbbf24;
+}
+
+.terminal-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.terminal-content::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+
+.terminal-content::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+.terminal-content::-webkit-scrollbar-thumb:hover {
+  background: var(--surface);
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.status-badge.active {
+  background: rgba(120, 200, 160, 0.2);
+  color: var(--accent-mint);
+}
+
+.status-badge.inactive {
+  background: rgba(128, 128, 128, 0.2);
+  color: var(--text-secondary);
+}
+
+.loading-state,
+.error-state,
+.empty-state {
+  text-align: center;
+  padding: 2rem;
+  color: var(--text-secondary);
+}
+
+.error-state {
+  color: var(--accent-neon);
+}
+

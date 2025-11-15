@@ -6,10 +6,12 @@ dotenv.config()
 const PORT = process.env.PORT || 8000
 
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`)
-  console.log(`📊 Health check: http://localhost:${PORT}/health`)
-  console.log(`🔐 Auth endpoints:`)
-  console.log(`   POST http://localhost:${PORT}/api/auth/signup`)
-  console.log(`   POST http://localhost:${PORT}/api/auth/login`)
+  console.log('')
+  console.log('🚀 Server started')
+  console.log(`   Port: ${PORT}`)
+  console.log(`   Environment: ${process.env.NODE_ENV || 'development'}`)
+  console.log(`   Health: http://localhost:${PORT}/health`)
+  console.log(`   Auth: http://localhost:${PORT}/api/auth/signup`)
+  console.log('')
 })
 

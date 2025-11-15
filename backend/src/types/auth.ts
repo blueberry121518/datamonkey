@@ -1,6 +1,6 @@
 export interface User {
   id: string
-  email: string
+  email: string | null
   created_at: string
   updated_at: string
 }
@@ -13,6 +13,16 @@ export interface SignupRequest {
 export interface LoginRequest {
   email: string
   password: string
+}
+
+export interface WalletAuthRequest {
+  walletAddress: string
+  signature: string
+  nonce: string
+}
+
+export interface NonceRequest {
+  walletAddress: string
 }
 
 export interface AuthResponse {

@@ -2,6 +2,7 @@ import { Request, Response } from 'express'
 import { DatasetService } from '../services/dataset.service.js'
 import { CreateDatasetRequest, UpdateDatasetRequest } from '../types/dataset.js'
 import { z } from 'zod'
+import logger from '../utils/logger.js'
 
 const datasetService = new DatasetService()
 
@@ -91,14 +92,23 @@ export class DatasetController {
         return
       }
 
+      logger.info(`[DatasetController] getMyDatasets called for user: ${req.userId}`)
       const datasets = await datasetService.getSellerDatasets(req.userId)
+      logger.info(`[DatasetController] Found ${datasets?.length || 0} datasets for user ${req.userId}`)
+      logger.info(`[DatasetController] Datasets:`, JSON.stringify(datasets, null, 2))
+
+      // Disable caching to ensure fresh data
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
+      res.setHeader('Pragma', 'no-cache')
+      res.setHeader('Expires', '0')
 
       res.status(200).json({
         success: true,
-        data: datasets,
+        data: datasets || [],
       })
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      logger.error(`[DatasetController] getMyDatasets error:`, error)
       res.status(500).json({
         success: false,
         error: errorMessage,
@@ -442,6 +452,88 @@ export class DatasetController {
     }
 
     return data
+  }
+
+  /**
+   * Get interactions for a dataset (agent queries and purchases)
+   * GET /api/datasets/:id/interactions
+   */
+  async getDatasetInteractions(req: Request, res: Response): Promise<void> {
+    try {
+      if (!req.userId) {
+        res.status(401).json({
+          success: false,
+          error: 'Unauthorized',
+        })
+        return
+      }
+
+      const { id } = req.params
+      const limit = parseInt(req.query.limit as string) || 100
+
+      // Verify dataset belongs to user
+      const dataset = await datasetService.getDatasetById(id, req.userId)
+
+      // Get interactions for this dataset
+      const { AgentActionService } = await import('../services/agent-action.service.js')
+      const actionService = new AgentActionService()
+      const interactions = await actionService.getDatasetInteractions(id, limit)
+
+      res.status(200).json({
+        success: true,
+        data: interactions,
+      })
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      const statusCode = errorMessage.includes('not found') ? 404 : 500
+      res.status(statusCode).json({
+        success: false,
+        error: errorMessage,
+      })
+    }
+  }
+
+  /**
+   * Get sample data records for a dataset
+   * GET /api/datasets/:id/sample
+   */
+  async getDatasetSample(req: Request, res: Response): Promise<void> {
+    try {
+      if (!req.userId) {
+        res.status(401).json({
+          success: false,
+          error: 'Unauthorized',
+        })
+        return
+      }
+
+      const { id } = req.params
+      const sampleSize = parseInt(req.query.size as string) || 10
+
+      // Verify dataset belongs to user
+      const dataset = await datasetService.getDatasetById(id, req.userId)
+
+      // Get sample records
+      const { DataStorageService } = await import('../services/data-storage.service.js')
+      const dataStorageService = new DataStorageService()
+      const samples = await dataStorageService.getSampleRecords(
+        dataset.seller_id,
+        dataset.id,
+        sampleSize
+      )
+
+      res.status(200).json({
+        success: true,
+        data: samples,
+      })
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      const statusCode = errorMessage.includes('not found') ? 404 : 500
+      res.status(statusCode).json({
+        success: false,
+        error: errorMessage,
+      })
+    }
   }
 }
 

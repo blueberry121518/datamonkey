@@ -11,15 +11,29 @@ export interface AgentAction {
 }
 
 export type ActionType =
-  | 'query_seller'
-  | 'probe_dataset'
+  | 'agent_started'
+  | 'discovering_datasets'
+  | 'dataset_found'
+  | 'dataset_selected'
+  | 'no_datasets_found'
+  | 'probing_dataset'
+  | 'probe_complete'
+  | 'requesting_sample'
+  | 'sample_received'
+  | 'analyzing_sample'
+  | 'quality_check'
+  | 'quality_assessment_complete'
+  | 'decision_making'
+  | 'decision_purchase'
+  | 'decision_skip'
+  | 'requesting_data'
   | 'payment_402_received'
   | 'payment_signing'
   | 'payment_sent'
   | 'payment_verified'
   | 'data_received'
-  | 'quality_assessment'
   | 'purchase_complete'
+  | 'goal_completed'
   | 'error'
 
 export class AgentActionService {
@@ -116,6 +130,25 @@ export class AgentActionService {
 
     if (error) {
       throw new Error(`Failed to get recent actions: ${error.message}`)
+    }
+
+    return (data || []) as AgentAction[]
+  }
+
+  /**
+   * Get interactions for a dataset (actions from agents that queried/purchased this dataset)
+   */
+  async getDatasetInteractions(datasetId: string, limit: number = 100): Promise<AgentAction[]> {
+    // Query actions where details.dataset_id matches
+    const { data, error } = await supabase
+      .from('agent_actions')
+      .select('*')
+      .eq('details->>dataset_id', datasetId)
+      .order('created_at', { ascending: false })
+      .limit(limit)
+
+    if (error) {
+      throw new Error(`Failed to get dataset interactions: ${error.message}`)
     }
 
     return (data || []) as AgentAction[]

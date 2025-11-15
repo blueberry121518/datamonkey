@@ -279,6 +279,19 @@
   display: inline-block;
 }
 
+.seller-actions {
+  display: flex;
+  justify-content: center;
+  padding: 3rem 0;
+  margin-bottom: 2rem;
+}
+
+.btn-large {
+  padding: 1rem 2rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
 @media (min-width: 1024px) {
   .seller-sections {
     grid-template-columns: repeat(2, 1fr);

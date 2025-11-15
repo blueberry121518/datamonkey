@@ -23,7 +23,8 @@ function LoginModal({ isOpen, onClose, onSwitchToSignup, onSuccess }: LoginModal
     setLoading(true)
 
     try {
-      const response = await fetch('http://localhost:8000/api/auth/login', {
+      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -38,9 +39,12 @@ function LoginModal({ isOpen, onClose, onSwitchToSignup, onSuccess }: LoginModal
       }
 
       if (data.success && data.data) {
-        // Store token in localStorage
-        localStorage.setItem('token', data.data.token)
-        localStorage.setItem('user', JSON.stringify(data.data.user))
+        // Store token inside user object for consistency with ApiClient
+        const userWithToken = {
+          ...data.data.user,
+          token: data.data.token,
+        }
+        localStorage.setItem('user', JSON.stringify(userWithToken))
         
         if (onSuccess) {
           onSuccess(data.data.token, data.data.user)

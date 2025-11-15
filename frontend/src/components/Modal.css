@@ -28,11 +28,13 @@
   border: 1px solid var(--border);
   border-radius: 16px;
   width: 100%;
-  max-width: 440px;
+  max-width: 700px;
   max-height: 90vh;
   overflow-y: auto;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
   animation: slideUp 0.3s ease;
+  display: flex;
+  flex-direction: column;
 }
 
 @keyframes slideUp {
@@ -86,18 +88,16 @@
 
 .modal-body {
   padding: 24px;
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
 }
 
 @media (max-width: 768px) {
   .modal-content {
-    max-width: 100%;
+    max-width: 95%;
     margin: 0;
-    border-radius: 16px 16px 0 0;
-  }
-  
-  .modal-overlay {
-    align-items: flex-end;
-    padding: 0;
   }
 }
 

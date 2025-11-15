@@ -11,7 +11,7 @@ function Hero({ onStartSelling, onLaunchAgent }: HeroProps) {
       <div className="hero-grid">
         <div className="hero-left">
           <div className="hero-badge">
-            <span className="badge-icon">🤖</span>
+            <span className="badge-icon">🐵</span>
             <span>Agentic Marketplace</span>
           </div>
           <h1 className="hero-heading">
@@ -35,7 +35,7 @@ function Hero({ onStartSelling, onLaunchAgent }: HeroProps) {
           <div className="hero-art">
             <div className="floating-card card-1">
               <div className="card-header">
-                <span className="card-icon">📊</span>
+                <span className="card-icon">🍌</span>
                 <span className="card-title">Dataset #1234</span>
               </div>
               <div className="card-content">
@@ -51,7 +51,7 @@ function Hero({ onStartSelling, onLaunchAgent }: HeroProps) {
             </div>
             <div className="floating-card card-2">
               <div className="card-header">
-                <span className="card-icon">🤖</span>
+                <span className="card-icon">🐵</span>
                 <span className="card-title">Agent Active</span>
               </div>
               <div className="card-content">
@@ -66,7 +66,7 @@ function Hero({ onStartSelling, onLaunchAgent }: HeroProps) {
             </div>
             <div className="floating-card card-3">
               <div className="card-header">
-                <span className="card-icon">🔥</span>
+                <span className="card-icon">🌴</span>
                 <span className="card-title">Hot Data</span>
               </div>
               <div className="card-content">

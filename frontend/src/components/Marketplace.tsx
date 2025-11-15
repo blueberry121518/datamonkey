@@ -15,7 +15,7 @@ function Marketplace() {
       quality: 94,
       price: '$0.05/batch',
       format: 'JSON',
-      seller: 'DataCorp'
+      producer: 'DataCorp'
     },
     {
       id: 'DS-5678',
@@ -23,7 +23,7 @@ function Marketplace() {
       quality: 87,
       price: '$0.07/batch',
       format: 'CSV',
-      seller: 'AnalyticsPro'
+      producer: 'AnalyticsPro'
     },
     {
       id: 'DS-9012',
@@ -31,7 +31,7 @@ function Marketplace() {
       quality: 91,
       price: '$0.04/batch',
       format: 'JSON',
-      seller: 'IoTData'
+      producer: 'IoTData'
     }
   ]
 
@@ -45,7 +45,7 @@ function Marketplace() {
       <div className="marketplace-grid">
         <div className="hot-data-section">
           <div className="section-header">
-            <span className="fire-icon">🔥</span>
+            <span className="fire-icon">🌴</span>
             <h3>Hot Data</h3>
           </div>
           <div className="hot-data-list">
@@ -61,12 +61,12 @@ function Marketplace() {
               </div>
             ))}
           </div>
-          <p className="section-note">Sellers can curate datasets to match these high-demand categories</p>
+          <p className="section-note">Producers can curate datasets to match these high-demand categories</p>
         </div>
 
         <div className="datasets-section">
           <div className="section-header">
-            <span className="section-icon">📊</span>
+            <span className="section-icon">🍌</span>
             <h3>Available Datasets</h3>
           </div>
           <div className="datasets-list">
@@ -81,7 +81,7 @@ function Marketplace() {
                 <h4 className="dataset-name">{dataset.name}</h4>
                 <div className="dataset-details">
                   <span className="dataset-format">{dataset.format}</span>
-                  <span className="dataset-seller">by {dataset.seller}</span>
+                  <span className="dataset-producer">by {dataset.producer}</span>
                 </div>
                 <div className="dataset-footer">
                   <span className="dataset-price">{dataset.price}</span>

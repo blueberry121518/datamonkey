@@ -1,5 +1,6 @@
 import { supabase } from '../config/supabase.js'
 import { DatasetListing, CreateDatasetRequest, UpdateDatasetRequest } from '../types/dataset.js'
+import logger from '../utils/logger.js'
 
 export class DatasetService {
   /**
@@ -18,7 +19,7 @@ export class DatasetService {
    * Auto-detect metadata from data sample
    * This is a simplified version - can be enhanced with actual file parsing
    */
-  private autoDetectMetadata(data: any): {
+  autoDetectMetadata(data: any): {
     schema?: Record<string, any>
     total_rows?: number
     content_summary?: string
@@ -117,6 +118,12 @@ export class DatasetService {
       ...(autoDetected.metadata || {}),
     }
 
+    // Merge metadata with any existing metadata (like source: 'warehouse')
+    const mergedMetadata = {
+      ...(data.metadata || {}),
+      ...finalMetadata,
+    }
+
     const datasetData = {
       seller_id: sellerId,
       name: data.name,
@@ -125,7 +132,7 @@ export class DatasetService {
       endpoint_path: endpointPath,
       type: data.type || 'api',
       price_per_record: data.price_per_record || 0.001,
-      metadata: finalMetadata,
+      metadata: mergedMetadata,
       schema: data.schema || autoDetected.schema || null,
       total_rows: data.total_rows || autoDetected.total_rows || null,
       quality_score: data.quality_score || autoDetected.quality_score || null,
@@ -151,15 +158,21 @@ export class DatasetService {
    * Get all datasets for a seller
    */
   async getSellerDatasets(sellerId: string): Promise<DatasetListing[]> {
-    const { data, error } = await supabase
+    logger.info(`[DatasetService] getSellerDatasets called for seller: ${sellerId}`)
+    
+    const { data, error, count } = await supabase
       .from('dataset_listings')
-      .select('*')
+      .select('*', { count: 'exact' })
       .eq('seller_id', sellerId)
       .order('created_at', { ascending: false })
 
     if (error) {
+      logger.error(`[DatasetService] Error fetching datasets: ${error.message}`)
       throw new Error(`Failed to fetch datasets: ${error.message}`)
     }
+
+    logger.info(`[DatasetService] Query returned count: ${count}, data length: ${data?.length || 0}`)
+    logger.info(`[DatasetService] Datasets found:`, data ? JSON.stringify(data.map(d => ({ id: d.id, name: d.name, is_active: d.is_active })), null, 2) : 'null')
 
     return (data || []) as DatasetListing[]
   }
@@ -276,6 +289,84 @@ export class DatasetService {
       datasets: (data || []) as DatasetListing[],
       total: count || 0,
     }
+  }
+
+  /**
+   * Find or create a dataset endpoint for a category
+   * Returns existing endpoint if found, creates new one if not
+   */
+  async findOrCreateEndpointForCategory(
+    sellerId: string,
+    category: string,
+    stats: {
+      recordCount: number
+      sampleRecords: Array<Record<string, any>>
+      fields: string[]
+    },
+    isGeneral: boolean = false
+  ): Promise<DatasetListing> {
+    const name = isGeneral 
+      ? 'General Warehouse Data'
+      : `${category} Dataset`
+
+    // Check if endpoint already exists for this category
+    const { data: existing } = await supabase
+      .from('dataset_listings')
+      .select('*')
+      .eq('seller_id', sellerId)
+      .eq('name', name)
+      .maybeSingle()
+
+    if (existing) {
+      logger.info(`[DatasetService] Found existing endpoint for category: ${category}`)
+      
+      // Update existing endpoint with latest stats
+      const autoMetadata = this.autoDetectMetadata(stats.sampleRecords)
+      const { data: updated, error: updateError } = await supabase
+        .from('dataset_listings')
+        .update({
+          total_rows: stats.recordCount,
+          schema: autoMetadata.schema,
+          quality_score: autoMetadata.quality_score || 0.8,
+          content_summary: autoMetadata.content_summary || `Dataset with ${stats.recordCount} records`,
+          is_active: true,
+          metadata: {
+            ...(existing.metadata as Record<string, any> || {}),
+            source: 'warehouse', // Ensure it's marked as warehouse
+          },
+        })
+        .eq('id', existing.id)
+        .select()
+        .single()
+
+      if (updateError) {
+        logger.error(`[DatasetService] Error updating endpoint: ${updateError.message}`)
+        return existing as DatasetListing
+      }
+
+      return updated as DatasetListing
+    }
+
+    // Create new endpoint
+    logger.info(`[DatasetService] Creating new endpoint for category: ${category}`)
+    const autoMetadata = this.autoDetectMetadata(stats.sampleRecords)
+    
+    return await this.createDataset(sellerId, {
+      name,
+      description: isGeneral 
+        ? `General warehouse data: ${stats.recordCount} records from various categories`
+        : `${category} data: ${stats.recordCount} records`,
+      category: isGeneral ? 'General' : category,
+      type: 'api',
+      price_per_record: 0.001,
+      schema: autoMetadata.schema,
+      total_rows: stats.recordCount,
+      quality_score: autoMetadata.quality_score || 0.8,
+      content_summary: autoMetadata.content_summary || `Dataset with ${stats.recordCount} records`,
+      metadata: {
+        source: 'warehouse', // Mark as warehouse endpoint (unstructured data)
+      },
+    })
   }
 }
 

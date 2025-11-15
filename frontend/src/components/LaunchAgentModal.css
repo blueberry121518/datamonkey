@@ -1,0 +1,419 @@
+.launch-agent-modal-wrapper .modal-content {
+  max-width: 800px;
+  width: 95vw;
+}
+
+.launch-agent-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  width: 100%;
+}
+
+/* Command Input Section */
+.command-section {
+  padding: 0.75rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.command-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.file-upload-area {
+  flex-shrink: 0;
+}
+
+.file-input {
+  display: none;
+}
+
+.file-upload-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+  color: var(--text-secondary);
+  transition: all 0.2s;
+}
+
+.file-upload-label:hover {
+  border-color: var(--accent-mint);
+  color: var(--accent-mint);
+  background: var(--surface);
+}
+
+.file-selected {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  width: auto;
+  min-width: 120px;
+  max-width: 200px;
+  font-size: 12px;
+  color: var(--text-primary);
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.file-remove {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  padding: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.file-remove:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+.command-input {
+  flex: 1;
+  padding: 8px 12px;
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--text-primary);
+  transition: all 0.2s;
+}
+
+.command-input:focus {
+  outline: none;
+  border-color: var(--accent-mint);
+  box-shadow: 0 0 0 3px rgba(120, 200, 160, 0.1);
+}
+
+.command-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.send-button {
+  padding: 8px 16px;
+  background: var(--accent-mint);
+  border: 2px solid #5aaa82;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #062a1d;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.send-button:hover:not(:disabled) {
+  background: #8dd4b4;
+  transform: translateY(-1px);
+}
+
+.send-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Endpoint Fields - Matching UploadDataModal */
+.endpoint-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-field label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.form-field .required {
+  color: var(--accent-mint);
+}
+
+.form-field input,
+.form-field textarea {
+  padding: 0.75rem;
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-family: inherit;
+  transition: all 0.2s;
+}
+
+.form-field input:focus,
+.form-field textarea:focus {
+  outline: none;
+  border-color: var(--accent-mint);
+  box-shadow: 0 0 0 3px rgba(120, 200, 160, 0.1);
+}
+
+.form-field input:disabled,
+.form-field textarea:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.form-field textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.field-hint {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 0.25rem;
+  display: block;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+@media (max-width: 640px) {
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.loading-indicator {
+  font-size: 12px;
+  color: var(--accent-mint);
+  font-weight: normal;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.field-loading {
+  border-color: var(--accent-mint);
+  box-shadow: 0 0 0 3px rgba(120, 200, 160, 0.1);
+  animation: fieldPulse 1s ease-in-out infinite;
+}
+
+@keyframes fieldPulse {
+  0%, 100% {
+    border-color: var(--accent-mint);
+  }
+  50% {
+    border-color: rgba(120, 200, 160, 0.5);
+  }
+}
+
+.form-error {
+  padding: 12px 16px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 8px;
+  color: #ef4444;
+  font-size: 14px;
+}
+
+/* Terminal-style Notification Box - Matching UploadDataModal */
+.notification-terminal {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 0.75rem;
+  max-height: 300px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+.terminal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.terminal-title {
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+.terminal-clear-btn {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  padding: 0.375rem 0.875rem;
+  border-radius: 8px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+.terminal-clear-btn:hover {
+  border-color: var(--accent-mint);
+  color: var(--text-primary);
+  background: var(--card-bg);
+}
+
+.terminal-content {
+  padding: 1rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  max-height: 250px;
+  background: var(--bg);
+}
+
+.terminal-line {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.25rem 0;
+  line-height: 1.5;
+}
+
+.terminal-timestamp {
+  color: var(--text-secondary);
+  min-width: 80px;
+  font-size: 0.7rem;
+  font-weight: 500;
+}
+
+.terminal-message {
+  flex: 1;
+  word-break: break-word;
+  color: var(--text-primary);
+}
+
+.terminal-line.info .terminal-message {
+  color: var(--text-primary);
+}
+
+.terminal-line.success .terminal-message {
+  color: var(--accent-mint);
+}
+
+.terminal-line.error .terminal-message {
+  color: var(--accent-neon);
+}
+
+.terminal-line.warning .terminal-message {
+  color: #fbbf24;
+}
+
+/* Action Buttons - Matching UploadDataModal */
+.upload-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+  margin-top: 0.5rem;
+}
+
+.upload-actions .btn-primary,
+.upload-actions .btn-secondary {
+  width: auto !important;
+  min-width: 100px;
+  padding: 10px 20px !important;
+  font-size: 14px !important;
+  white-space: nowrap;
+}
+
+.upload-actions .btn-secondary {
+  background: var(--surface) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 8px !important;
+}
+
+.upload-actions .btn-secondary:hover:not(:disabled) {
+  background: var(--card-bg) !important;
+  border-color: var(--accent-mint) !important;
+}
+
+.upload-actions .btn-primary {
+  background: var(--accent-mint) !important;
+  color: #062a1d !important;
+  border: 2px solid #5aaa82 !important;
+  border-radius: 999px !important;
+}
+
+.upload-actions .btn-primary:hover:not(:disabled) {
+  background: #8dd4b4 !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(120, 200, 160, 0.3) !important;
+}
+
+/* Scrollbar styling */
+.terminal-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.terminal-content::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+
+.terminal-content::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+.terminal-content::-webkit-scrollbar-thumb:hover {
+  background: var(--surface);
+}

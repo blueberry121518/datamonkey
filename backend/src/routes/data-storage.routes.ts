@@ -5,7 +5,7 @@ import { authenticate } from '../middleware/auth.middleware.js'
 const router = Router()
 const dataStorageController = new DataStorageController()
 
-// Protected routes (seller uploads)
+// Protected routes (producer uploads)
 router.post(
   '/upload',
   authenticate,
@@ -16,14 +16,30 @@ router.get(
   authenticate,
   dataStorageController.getDataCount.bind(dataStorageController)
 )
+router.get(
+  '/warehouse/stats',
+  authenticate,
+  dataStorageController.getWarehouseStats.bind(dataStorageController)
+)
+router.post(
+  '/warehouse/ensure-endpoints',
+  authenticate,
+  dataStorageController.ensureWarehouseEndpoints.bind(dataStorageController)
+)
+// Deprecated - kept for backwards compatibility
+router.post(
+  '/warehouse/create-endpoint',
+  authenticate,
+  dataStorageController.createEndpointFromWarehouse.bind(dataStorageController)
+)
 
 // Public routes (agents can query)
 router.get(
-  '/seller/:sellerId/query',
+  '/producer/:producerId/query',
   dataStorageController.querySellerData.bind(dataStorageController)
 )
 router.get(
-  '/seller/:sellerId/sample',
+  '/producer/:producerId/sample',
   dataStorageController.getSampleRecords.bind(dataStorageController)
 )
 

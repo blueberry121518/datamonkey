@@ -3,32 +3,32 @@ import './Features.css'
 function Features() {
   const features = [
     {
-      icon: '🤖',
+      icon: '🐵',
       title: 'Autonomous Agents',
-      description: 'Buyers deploy agents with goals. They automatically discover, evaluate, and purchase datasets that match requirements.'
+      description: 'Consumers deploy agents with goals. They automatically discover, evaluate, and purchase datasets that match requirements.'
     },
     {
-      icon: '📊',
+      icon: '🍌',
       title: 'Quality Scoring',
       description: 'Every dataset is scored for quality and format. Agents only purchase data that meets their standards.'
     },
     {
-      icon: '💰',
+      icon: '🌿',
       title: 'Smart Negotiation',
       description: 'Agents negotiate prices based on urgency, data rarity, quality scores, and market conditions.'
     },
     {
-      icon: '🔥',
+      icon: '🌴',
       title: 'Hot Data Tracking',
-      description: 'Sellers see what data is in high demand and can curate datasets to match buyer needs.'
+      description: 'Producers see what data is in high demand and can curate datasets to match consumer needs.'
     },
     {
-      icon: '⚡',
+      icon: '🐒',
       title: 'Batch Purchasing',
       description: 'Agents buy data in small batches, continuously evaluating quality before committing to larger purchases.'
     },
     {
-      icon: '⏳',
+      icon: '🌿',
       title: 'Patient Waiting',
       description: 'Agents wait for quality data to become available rather than settling for subpar datasets.'
     }

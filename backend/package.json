@@ -9,6 +9,7 @@
     "migrate": "tsx src/migrate.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.69.0",
     "@coinbase/cdp-sdk": "^1.38.6",
     "@coinbase/coinbase-sdk": "^0.25.0",
     "@supabase/supabase-js": "^2.39.0",
@@ -17,6 +18,7 @@
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
+    "ethers": "^6.15.0",
     "express": "^4.18.2",
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.0.2",

@@ -1,4 +1,5 @@
 import { supabase } from '../config/supabase.js'
+import logger from '../utils/logger.js'
 
 export interface DataRecord {
   id: string
@@ -238,6 +239,169 @@ export class DataStorageService {
     }
 
     return count || 0
+  }
+
+  /**
+   * Get warehouse data stats (data without dataset_listing_id)
+   */
+  async getWarehouseDataStats(sellerId: string): Promise<{
+    recordCount: number
+    categories: string[]
+    sampleRecords: Array<Record<string, any>>
+    fields: string[]
+  }> {
+    const { data, error } = await supabase
+      .from('seller_data_storage')
+      .select('data_record, metadata')
+      .eq('seller_id', sellerId)
+      .is('dataset_listing_id', null)
+      .order('created_at', { ascending: false })
+      .limit(100)
+
+    if (error) {
+      throw new Error(`Failed to get warehouse data: ${error.message}`)
+    }
+
+    const records = (data || []).map((d) => d.data_record)
+    const categories = new Set<string>()
+    const fields = new Set<string>()
+
+    records.forEach((record) => {
+      if (record && typeof record === 'object') {
+        Object.keys(record).forEach((key) => fields.add(key))
+        if (record.category) {
+          categories.add(String(record.category))
+        }
+      }
+    })
+
+    // Get category from metadata if available
+    data?.forEach((item) => {
+      if (item.metadata?.category) {
+        categories.add(String(item.metadata.category))
+      }
+    })
+
+    // Get actual count (not just limited records)
+    const { count, error: countError } = await supabase
+      .from('seller_data_storage')
+      .select('*', { count: 'exact', head: true })
+      .eq('seller_id', sellerId)
+      .is('dataset_listing_id', null)
+
+    if (countError) {
+      logger.error(`[DataStorageService] Error getting warehouse count: ${countError.message}`)
+      throw new Error(`Failed to get warehouse data count: ${countError.message}`)
+    }
+
+    logger.info(`[DataStorageService] Warehouse record count for seller ${sellerId}: ${count || 0}`)
+    logger.info(`[DataStorageService] Fetched ${data?.length || 0} warehouse records for analysis`)
+
+    const result = {
+      recordCount: count || 0,
+      categories: Array.from(categories),
+      sampleRecords: records.slice(0, 10),
+      fields: Array.from(fields),
+    }
+
+    logger.info(`[DataStorageService] Warehouse stats result:`, JSON.stringify(result, null, 2))
+
+    return result
+  }
+
+  /**
+   * Get ALL seller data categorized into general vs structured
+   * General = unstructured warehouse data (dataset_listing_id is NULL)
+   * Structured = data with dataset_listing_id (already linked to specific datasets)
+   */
+  async getAllSellerDataCategorized(sellerId: string): Promise<{
+    general: {
+      recordCount: number
+      sampleRecords: Array<Record<string, any>>
+      fields: string[]
+    }
+    structured: Map<string, {
+      recordCount: number
+      sampleRecords: Array<Record<string, any>>
+      fields: string[]
+      dataset_listing_id: string
+    }>
+  }> {
+    const { data, error } = await supabase
+      .from('seller_data_storage')
+      .select('id, data_record, metadata, dataset_listing_id')
+      .eq('seller_id', sellerId)
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      throw new Error(`Failed to get seller data: ${error.message}`)
+    }
+
+    const generalRecords: Array<Record<string, any>> = []
+    const generalFields = new Set<string>()
+    
+    const structuredMap = new Map<string, {
+      recordCount: number
+      sampleRecords: Array<Record<string, any>>
+      fields: Set<string>
+      dataset_listing_id: string
+    }>()
+
+    data?.forEach((item) => {
+      if (!item.dataset_listing_id) {
+        // General/unstructured data
+        if (item.data_record && typeof item.data_record === 'object') {
+          generalRecords.push(item.data_record)
+          Object.keys(item.data_record).forEach((key) => generalFields.add(key))
+        }
+      } else {
+        // Structured data (already linked to a dataset)
+        const datasetId = item.dataset_listing_id
+        const structured = structuredMap.get(datasetId) || {
+          recordCount: 0,
+          sampleRecords: [] as Array<Record<string, any>>,
+          fields: new Set<string>(),
+          dataset_listing_id: datasetId,
+        }
+
+        structured.recordCount++
+        if (structured.sampleRecords.length < 10 && item.data_record) {
+          structured.sampleRecords.push(item.data_record)
+        }
+
+        if (item.data_record && typeof item.data_record === 'object') {
+          Object.keys(item.data_record).forEach((key) => structured.fields.add(key))
+        }
+
+        structuredMap.set(datasetId, structured)
+      }
+    })
+
+    // Convert Set to Array for structured data
+    const structuredResult = new Map<string, {
+      recordCount: number
+      sampleRecords: Array<Record<string, any>>
+      fields: string[]
+      dataset_listing_id: string
+    }>()
+
+    structuredMap.forEach((value, datasetId) => {
+      structuredResult.set(datasetId, {
+        recordCount: value.recordCount,
+        sampleRecords: value.sampleRecords,
+        fields: Array.from(value.fields),
+        dataset_listing_id: datasetId,
+      })
+    })
+
+    return {
+      general: {
+        recordCount: generalRecords.length,
+        sampleRecords: generalRecords.slice(0, 10),
+        fields: Array.from(generalFields),
+      },
+      structured: structuredResult,
+    }
   }
 }
 

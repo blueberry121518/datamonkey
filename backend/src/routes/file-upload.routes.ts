@@ -26,5 +26,12 @@ router.get(
   fileUploadController.getDataRecords.bind(fileUploadController)
 )
 
+router.post(
+  '/suggest-metadata',
+  authenticate,
+  upload.array('files', 1), // Single file for metadata suggestion
+  fileUploadController.suggestMetadata.bind(fileUploadController)
+)
+
 export default router
 

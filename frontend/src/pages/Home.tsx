@@ -28,34 +28,50 @@ function Home() {
   useEffect(() => {
     // Check if user is already logged in
     const storedUser = localStorage.getItem('user')
-    const storedToken = localStorage.getItem('token')
-    if (storedUser && storedToken) {
-      setUser(JSON.parse(storedUser))
+    if (storedUser) {
+      try {
+        const user = JSON.parse(storedUser)
+        if (user.token) {
+          setUser(user)
+        }
+      } catch {
+        // Invalid JSON, ignore
+      }
     }
   }, [])
 
-  const handleAuthSuccess = (token: string, userData: any) => {
+  const handleAuthSuccess = (_token: string, userData: any) => {
     setUser(userData)
   }
 
   const handleLogout = () => {
-    localStorage.removeItem('token')
     localStorage.removeItem('user')
+    localStorage.removeItem('token') // Remove for backwards compatibility
     setUser(null)
   }
 
-  const handleNavigateToDashboard = (view?: 'seller' | 'buyer') => {
+  const handleNavigateToDashboard = (view?: 'producer' | 'consumer') => {
     const storedUser = localStorage.getItem('user')
-    const storedToken = localStorage.getItem('token')
     
-    if (storedUser && storedToken) {
-      if (view) {
-        navigate(`/dashboard?view=${view}`)
-      } else {
-        navigate('/dashboard')
+    if (storedUser) {
+      try {
+        const user = JSON.parse(storedUser)
+        if (user.token) {
+          if (view) {
+            navigate(`/dashboard?view=${view}`)
+          } else {
+            navigate('/dashboard')
+          }
+          return
+        }
+      } catch {
+        // Invalid JSON, continue to signup
       }
-    } else {
-      setIsSignupOpen(true)
+    }
+    
+    // Not logged in - store intended view and open login
+    if (view) {
+      setIsLoginOpen(true)
       // Store the intended view in sessionStorage to use after login
       if (view) {
         sessionStorage.setItem('intendedView', view)
@@ -73,29 +89,35 @@ function Home() {
         onLogout={handleLogout}
       />
       <Hero 
-        onStartSelling={() => handleNavigateToDashboard('seller')} 
-        onLaunchAgent={() => handleNavigateToDashboard('buyer')} 
+        onStartSelling={() => handleNavigateToDashboard('producer')} 
+        onLaunchAgent={() => handleNavigateToDashboard('consumer')} 
       />
       <Features />
       <HowItWorks />
       <Marketplace />
       <CTA 
-        onStartSelling={() => handleNavigateToDashboard('seller')} 
-        onDeployAgent={() => handleNavigateToDashboard('buyer')} 
+        onStartSelling={() => handleNavigateToDashboard('producer')} 
+        onDeployAgent={() => handleNavigateToDashboard('consumer')} 
       />
       <Footer />
       
       <LoginModal
         isOpen={isLoginOpen}
         onClose={() => setIsLoginOpen(false)}
-        onSwitchToSignup={() => setIsSignupOpen(true)}
+        onSwitchToSignup={() => {
+          setIsLoginOpen(false)
+          setIsSignupOpen(true)
+        }}
         onSuccess={handleAuthSuccess}
       />
       
       <SignupModal
         isOpen={isSignupOpen}
         onClose={() => setIsSignupOpen(false)}
-        onSwitchToLogin={() => setIsLoginOpen(true)}
+        onSwitchToLogin={() => {
+          setIsSignupOpen(false)
+          setIsLoginOpen(true)
+        }}
         onSuccess={handleAuthSuccess}
       />
     </div>
