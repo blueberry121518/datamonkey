@@ -1,0 +1,96 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  /* Colors from design.json */
+  --bg: #383636;
+  --surface: #424040;
+  --text-primary: #f0f0f0;
+  --text-secondary: #c8c8c8;
+  --accent-neon: #bf2031;
+  --accent-mint: #78c8a0;
+  --border: #565454;
+  --card-bg: #403e3e;
+  --nav-bg: #444242;
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: var(--bg);
+  color: var(--text-primary);
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* Typography scale from design.json */
+.display-xxl {
+  font-size: 72px;
+  line-height: 76px;
+  font-weight: 500;
+  letter-spacing: -1px;
+}
+
+.display-xl {
+  font-size: 56px;
+  line-height: 62px;
+  font-weight: 500;
+  letter-spacing: -0.5px;
+}
+
+h1 {
+  font-size: 40px;
+  line-height: 46px;
+  font-weight: 500;
+}
+
+h2 {
+  font-size: 32px;
+  line-height: 38px;
+  font-weight: 500;
+}
+
+.body-lg {
+  font-size: 18px;
+  line-height: 28px;
+  font-weight: 400;
+}
+
+body {
+  font-size: 16px;
+  line-height: 26px;
+  font-weight: 400;
+}
+
+.label {
+  font-size: 14px;
+  line-height: 18px;
+  font-weight: 600;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--surface);
+}

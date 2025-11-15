@@ -1,0 +1,23 @@
+.App {
+  min-height: 100vh;
+  background: var(--bg);
+}
+
+/* Section spacing from design.json */
+section {
+  padding: 64px 16px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+@media (min-width: 768px) {
+  section {
+    padding: 64px 24px;
+  }
+}
+
+@media (min-width: 1024px) {
+  section {
+    padding: 64px 32px;
+  }
+}

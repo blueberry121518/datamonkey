@@ -1,0 +1,251 @@
+{
+  "meta": {
+    "name": "landing-hero-theme",
+    "source_image": "048ac9a0-a6a8-4cbf-81f5-59ccfd1c5a3a.jpg",
+    "description": "Design tokens inferred from screenshot: layout, colors, spacing, typography, and key components."
+  },
+  "colors": {
+    "background": "#383636",
+    "surface": "#424040",
+    "textPrimary": "#f0f0f0",
+    "textSecondary": "#c8c8c8",
+    "accentNeon": "#bf2031",
+    "accentMint": "#78c8a0",
+    "border": "#565454",
+    "paletteSample": [
+      {
+        "hex": "#4a403c",
+        "count": 10612
+      },
+      {
+        "hex": "#4b3f3c",
+        "count": 3590
+      },
+      {
+        "hex": "#4a403d",
+        "count": 2578
+      },
+      {
+        "hex": "#4a413d",
+        "count": 2421
+      },
+      {
+        "hex": "#4b403c",
+        "count": 1602
+      },
+      {
+        "hex": "#bf2031",
+        "count": 1508
+      },
+      {
+        "hex": "#c52a49",
+        "count": 1214
+      },
+      {
+        "hex": "#383636",
+        "count": 726
+      }
+    ]
+  },
+  "typography": {
+    "fonts": {
+      "display": [
+        "serif",
+        "Georgia",
+        "Times New Roman"
+      ],
+      "ui": [
+        "Inter",
+        "system-ui",
+        "Helvetica",
+        "Arial",
+        "sans-serif"
+      ],
+      "mono": [
+        "ui-monospace",
+        "SFMono-Regular",
+        "Menlo",
+        "monospace"
+      ]
+    },
+    "scale": {
+      "display-xxl": {
+        "size": 72,
+        "lineHeight": 76,
+        "weight": 500,
+        "tracking": -1
+      },
+      "display-xl": {
+        "size": 56,
+        "lineHeight": 62,
+        "weight": 500,
+        "tracking": -0.5
+      },
+      "h1": {
+        "size": 40,
+        "lineHeight": 46,
+        "weight": 500
+      },
+      "h2": {
+        "size": 32,
+        "lineHeight": 38,
+        "weight": 500
+      },
+      "body-lg": {
+        "size": 18,
+        "lineHeight": 28,
+        "weight": 400
+      },
+      "body": {
+        "size": 16,
+        "lineHeight": 26,
+        "weight": 400
+      },
+      "label": {
+        "size": 14,
+        "lineHeight": 18,
+        "weight": 600
+      }
+    }
+  },
+  "spacing": {
+    "scale": [
+      4,
+      8,
+      12,
+      16,
+      20,
+      24,
+      32,
+      40,
+      48,
+      64,
+      80
+    ],
+    "containerPadding": 16,
+    "sectionPadding": 64,
+    "gutter": 24,
+    "radius": {
+      "xs": 4,
+      "sm": 8,
+      "md": 12,
+      "lg": 16,
+      "xl": 24,
+      "pill": 999
+    },
+    "shadow": {
+      "soft": "0 4px 12px rgba(0,0,0,0.25)",
+      "elevated": "0 10px 30px rgba(0,0,0,0.35)"
+    }
+  },
+  "layout": {
+    "grid": {
+      "columns": 12,
+      "maxWidth": 1200,
+      "columnGap": 24,
+      "rowGap": 24,
+      "margins": {
+        "mobile": 16,
+        "tablet": 24,
+        "desktop": 32
+      }
+    },
+    "hero": {
+      "nav": {
+        "position": "top",
+        "style": "pillContainers"
+      },
+      "leftColumn": {
+        "span": 5,
+        "content": [
+          "heading",
+          "subheading",
+          "primaryCta"
+        ]
+      },
+      "rightColumn": {
+        "span": 7,
+        "content": [
+          "heroArt"
+        ]
+      },
+      "alignment": {
+        "vertical": "center",
+        "heroArt": "cover-right"
+      }
+    }
+  },
+  "components": {
+    "navbar": {
+      "container": {
+        "background": "#444242",
+        "radius": 16,
+        "padding": [
+          8,
+          12
+        ]
+      },
+      "link": {
+        "color": "#f0f0f0",
+        "hover": "#6a6868",
+        "gap": 16
+      }
+    },
+    "button": {
+      "primary": {
+        "background": "#78c8a0",
+        "text": "#062a1d",
+        "radius": 999,
+        "padding": [
+          10,
+          16
+        ],
+        "border": {
+          "color": "#5aaa82",
+          "width": 2
+        }
+      },
+      "ghost": {
+        "background": "transparent",
+        "text": "#f0f0f0",
+        "radius": 16,
+        "padding": [
+          8,
+          14
+        ],
+        "border": {
+          "color": "#565454",
+          "width": 1
+        }
+      }
+    },
+    "hero": {
+      "heading": {
+        "font": "display-xxl",
+        "color": "#f0f0f0",
+        "maxWidth": 520
+      },
+      "subheading": {
+        "font": "body-lg",
+        "color": "#c8c8c8",
+        "maxWidth": 520
+      },
+      "cta": {
+        "variant": "primary",
+        "icon": true
+      },
+      "art": {
+        "type": "image",
+        "objectFit": "cover",
+        "bleedRight": true
+      }
+    },
+    "card": {
+      "background": "#403e3e",
+      "border": "#565454",
+      "radius": 16,
+      "padding": 16
+    }
+  }
+}
+
