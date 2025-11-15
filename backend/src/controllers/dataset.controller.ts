@@ -1,0 +1,447 @@
+import { Request, Response } from 'express'
+import { DatasetService } from '../services/dataset.service.js'
+import { CreateDatasetRequest, UpdateDatasetRequest } from '../types/dataset.js'
+import { z } from 'zod'
+
+const datasetService = new DatasetService()
+
+// Validation schemas
+const createDatasetSchema = z.object({
+  name: z.string().min(1, 'Name is required').max(255, 'Name too long'),
+  description: z.string().max(2000, 'Description too long').optional(),
+  category: z.string().max(100).optional(),
+  type: z.enum(['api', 'agent']).optional(),
+  price_per_record: z.number().min(0, 'Price must be positive').optional(),
+  metadata: z.record(z.any()).optional(),
+  schema: z.record(z.any()).optional(),
+  total_rows: z.number().int().positive().optional(),
+  quality_score: z.number().min(0).max(1).optional(),
+  content_summary: z.string().optional(),
+  endpoint_url: z.string().url().optional(),
+})
+
+const updateDatasetSchema = z.object({
+  name: z.string().min(1).max(255).optional(),
+  description: z.string().max(2000).optional(),
+  category: z.string().max(100).optional(),
+  price_per_record: z.number().min(0).optional(),
+  metadata: z.record(z.any()).optional(),
+  schema: z.record(z.any()).optional(),
+  total_rows: z.number().int().positive().optional(),
+  quality_score: z.number().min(0).max(1).optional(),
+  content_summary: z.string().optional(),
+  is_active: z.boolean().optional(),
+})
+
+export class DatasetController {
+  /**
+   * Create a new dataset listing
+   * POST /api/datasets
+   */
+  async createDataset(req: Request, res: Response): Promise<void> {
+    try {
+      if (!req.userId) {
+        res.status(401).json({
+          success: false,
+          error: 'Unauthorized',
+        })
+        return
+      }
+
+      // Validate request body
+      const validatedData = createDatasetSchema.parse(req.body) as CreateDatasetRequest
+
+      // Create dataset
+      const dataset = await datasetService.createDataset(req.userId, validatedData)
+
+      res.status(201).json({
+        success: true,
+        data: dataset,
+        message: 'Dataset created successfully',
+      })
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({
+          success: false,
+          error: 'Validation error',
+          details: error.errors,
+        })
+        return
+      }
+
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      res.status(500).json({
+        success: false,
+        error: errorMessage,
+      })
+    }
+  }
+
+  /**
+   * Get all datasets for the authenticated seller
+   * GET /api/datasets/my
+   */
+  async getMyDatasets(req: Request, res: Response): Promise<void> {
+    try {
+      if (!req.userId) {
+        res.status(401).json({
+          success: false,
+          error: 'Unauthorized',
+        })
+        return
+      }
+
+      const datasets = await datasetService.getSellerDatasets(req.userId)
+
+      res.status(200).json({
+        success: true,
+        data: datasets,
+      })
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      res.status(500).json({
+        success: false,
+        error: errorMessage,
+      })
+    }
+  }
+
+  /**
+   * Get a single dataset by ID
+   * GET /api/datasets/:id
+   */
+  async getDataset(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params
+      const sellerId = req.userId // Optional - for ownership check
+
+      const dataset = await datasetService.getDatasetById(id, sellerId)
+
+      res.status(200).json({
+        success: true,
+        data: dataset,
+      })
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      const statusCode = errorMessage.includes('not found') ? 404 : 500
+
+      res.status(statusCode).json({
+        success: false,
+        error: errorMessage,
+      })
+    }
+  }
+
+  /**
+   * Update a dataset listing
+   * PUT /api/datasets/:id
+   */
+  async updateDataset(req: Request, res: Response): Promise<void> {
+    try {
+      if (!req.userId) {
+        res.status(401).json({
+          success: false,
+          error: 'Unauthorized',
+        })
+        return
+      }
+
+      const { id } = req.params
+
+      // Validate request body
+      const validatedData = updateDatasetSchema.parse(req.body) as UpdateDatasetRequest
+
+      // Update dataset
+      const dataset = await datasetService.updateDataset(id, req.userId, validatedData)
+
+      res.status(200).json({
+        success: true,
+        data: dataset,
+        message: 'Dataset updated successfully',
+      })
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({
+          success: false,
+          error: 'Validation error',
+          details: error.errors,
+        })
+        return
+      }
+
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      const statusCode = errorMessage.includes('not found') ? 404 : 500
+
+      res.status(statusCode).json({
+        success: false,
+        error: errorMessage,
+      })
+    }
+  }
+
+  /**
+   * Delete a dataset listing
+   * DELETE /api/datasets/:id
+   */
+  async deleteDataset(req: Request, res: Response): Promise<void> {
+    try {
+      if (!req.userId) {
+        res.status(401).json({
+          success: false,
+          error: 'Unauthorized',
+        })
+        return
+      }
+
+      const { id } = req.params
+
+      await datasetService.deleteDataset(id, req.userId)
+
+      res.status(200).json({
+        success: true,
+        message: 'Dataset deleted successfully',
+      })
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      const statusCode = errorMessage.includes('not found') ? 404 : 500
+
+      res.status(statusCode).json({
+        success: false,
+        error: errorMessage,
+      })
+    }
+  }
+
+  /**
+   * Get all active datasets (for marketplace discovery)
+   * GET /api/datasets
+   */
+  async getActiveDatasets(req: Request, res: Response): Promise<void> {
+    try {
+      const { category, search, limit, offset } = req.query
+
+      const filters = {
+        category: category as string | undefined,
+        search: search as string | undefined,
+        limit: limit ? parseInt(limit as string) : undefined,
+        offset: offset ? parseInt(offset as string) : undefined,
+      }
+
+      const result = await datasetService.getActiveDatasets(filters)
+
+      res.status(200).json({
+        success: true,
+        data: result.datasets,
+        pagination: {
+          total: result.total,
+          limit: filters.limit || 10,
+          offset: filters.offset || 0,
+        },
+      })
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      res.status(500).json({
+        success: false,
+        error: errorMessage,
+      })
+    }
+  }
+
+  /**
+   * Serve dataset data (with x402 payment)
+   * GET /api/datasets/:id/data
+   * This endpoint is protected by x402PaymentMiddleware
+   * Payment is verified before this handler is called
+   */
+  async serveDataset(req: Request, res: Response): Promise<void> {
+    try {
+      const dataset = (req as any).dataset
+      const payment = (req as any).payment
+      const quantity = parseInt(req.query.quantity as string) || 1
+
+      if (!dataset) {
+        res.status(404).json({
+          success: false,
+          error: 'Dataset not found',
+        })
+        return
+      }
+
+      // Fetch actual data from seller's storage
+      const { DataStorageService } = await import('../services/data-storage.service.js')
+      const dataStorageService = new DataStorageService()
+      
+      const actualData = await dataStorageService.getDataRecords(
+        dataset.seller_id,
+        dataset.id,
+        quantity,
+        0
+      )
+
+      // If no data available, return empty array
+      const records = actualData.length > 0 ? actualData : this.generateMockData(dataset, quantity)
+
+      // Log agent actions
+      const agentId = (req as any).agentId
+      if (agentId) {
+        const { AgentActionService } = await import('../services/agent-action.service.js')
+        const actionService = new AgentActionService()
+
+        // Log payment verified
+        await actionService.logAction(
+          agentId,
+          'payment_verified',
+          {
+            dataset_id: dataset.id,
+            amount: payment.amount,
+            quantity,
+          },
+          'success'
+        )
+
+        // Log data received
+        await actionService.logAction(
+          agentId,
+          'data_received',
+          {
+            dataset_id: dataset.id,
+            dataset_name: dataset.name,
+            quantity: records.length,
+            records_preview: records.slice(0, 3), // First 3 records
+          },
+          'success'
+        )
+
+        // Log purchase complete
+        await actionService.logAction(
+          agentId,
+          'purchase_complete',
+          {
+            dataset_id: dataset.id,
+            quantity,
+            amount: payment.amount,
+            total_records: records.length,
+          },
+          'success'
+        )
+      }
+
+      res.status(200).json({
+        success: true,
+        data: {
+          dataset_id: dataset.id,
+          dataset_name: dataset.name,
+          quantity: quantity,
+          records: records,
+          schema: dataset.schema,
+          metadata: {
+            total_available: dataset.total_rows,
+            quality_score: dataset.quality_score,
+          },
+        },
+        payment: {
+          amount: payment.amount,
+          recipient: payment.recipient,
+          verified: true,
+        },
+      })
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      res.status(500).json({
+        success: false,
+        error: errorMessage,
+      })
+    }
+  }
+
+  /**
+   * Probe endpoint - returns dataset metadata without payment
+   * GET /api/datasets/:id/probe
+   */
+  async probeDataset(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params
+      const dataset = await datasetService.getDatasetById(id)
+
+      if (!dataset.is_active) {
+        res.status(404).json({
+          success: false,
+          error: 'Dataset not found',
+        })
+        return
+      }
+
+      // Return metadata without requiring payment
+      res.status(200).json({
+        success: true,
+        data: {
+          id: dataset.id,
+          name: dataset.name,
+          description: dataset.description,
+          category: dataset.category,
+          schema: dataset.schema,
+          price_per_record: dataset.price_per_record,
+          total_rows: dataset.total_rows,
+          quality_score: dataset.quality_score,
+          content_summary: dataset.content_summary,
+          metadata: dataset.metadata,
+          endpoint: `/api/datasets/${dataset.id}/data`,
+          probe_endpoint: `/api/datasets/${dataset.id}/probe`,
+        },
+      })
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      const statusCode = errorMessage.includes('not found') ? 404 : 500
+
+      res.status(statusCode).json({
+        success: false,
+        error: errorMessage,
+      })
+    }
+  }
+
+  /**
+   * Generate mock data based on dataset schema
+   * TODO: Replace with actual data fetching from storage
+   */
+  private generateMockData(dataset: any, quantity: number): any[] {
+    const data: any[] = []
+    const schema = dataset.schema
+
+    if (!schema || !schema.items || !schema.items.properties) {
+      // No schema - return empty array or basic structure
+      return Array(quantity).fill({})
+    }
+
+    const properties = schema.items.properties
+    const required = schema.items.required || []
+
+    for (let i = 0; i < quantity; i++) {
+      const record: any = {}
+      Object.keys(properties).forEach((key) => {
+        const prop = properties[key]
+        switch (prop.type) {
+          case 'string':
+            record[key] = `sample_${key}_${i}`
+            break
+          case 'number':
+          case 'integer':
+            record[key] = i + Math.random() * 100
+            break
+          case 'boolean':
+            record[key] = i % 2 === 0
+            break
+          case 'array':
+            record[key] = []
+            break
+          default:
+            record[key] = null
+        }
+      })
+      data.push(record)
+    }
+
+    return data
+  }
+}
+

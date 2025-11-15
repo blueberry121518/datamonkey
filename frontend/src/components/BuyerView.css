@@ -129,6 +129,72 @@
   margin: 0;
 }
 
+.agents-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.agent-card {
+  padding: 1.5rem;
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.agent-card:hover {
+  border-color: var(--accent-mint);
+  transform: translateY(-2px);
+}
+
+.agent-card.active {
+  border-color: var(--accent-mint);
+  background: rgba(90, 170, 130, 0.1);
+}
+
+.agent-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.agent-card-header h4 {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.agent-status {
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.agent-status.active {
+  background: rgba(90, 170, 130, 0.2);
+  color: var(--accent-mint);
+}
+
+.agent-goal {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin: 0 0 0.75rem 0;
+  line-height: 1.5;
+}
+
+.agent-stats {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
 @media (min-width: 1024px) {
   .buyer-sections {
     grid-template-columns: repeat(2, 1fr);

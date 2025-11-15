@@ -2,11 +2,17 @@ import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { supabase } from '../config/supabase.js'
 import { User, SignupRequest, LoginRequest } from '../types/auth.js'
+import { WalletService } from './wallet.service.js'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'default-secret-change-in-production'
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d'
 
 export class AuthService {
+  private walletService: WalletService
+
+  constructor() {
+    this.walletService = new WalletService()
+  }
   /**
    * Hash a password using bcrypt
    */
@@ -65,6 +71,14 @@ export class AuthService {
 
     if (insertError) {
       throw new Error(`Failed to create user: ${insertError.message}`)
+    }
+
+    // Create CDP wallet for the user
+    try {
+      await this.walletService.createWallet(newUser.id, `Data Monkey - ${newUser.email}`)
+    } catch (walletError) {
+      // Log error but don't fail signup - wallet can be created later
+      console.error('Failed to create wallet during signup:', walletError)
     }
 
     // Generate token

@@ -1,6 +1,12 @@
 import express, { Express, Request, Response, NextFunction } from 'express'
 import cors from 'cors'
 import authRoutes from './routes/auth.routes.js'
+import datasetRoutes from './routes/dataset.routes.js'
+import dataStorageRoutes from './routes/data-storage.routes.js'
+import agentRoutes from './routes/agent.routes.js'
+import fileUploadRoutes from './routes/file-upload.routes.js'
+import agentActionRoutes from './routes/agent-actions.routes.js'
+import realtimeRoutes from './routes/realtime.routes.js'
 
 const app: Express = express()
 
@@ -20,6 +26,12 @@ app.get('/health', (req: Request, res: Response) => {
 
 // API routes
 app.use('/api/auth', authRoutes)
+app.use('/api/datasets', datasetRoutes)
+app.use('/api/seller/data', dataStorageRoutes)
+app.use('/api/seller/files', fileUploadRoutes)
+app.use('/api/agents', agentRoutes)
+app.use('/api/agent-actions', agentActionRoutes)
+app.use('/api/realtime', realtimeRoutes)
 
 // 404 handler
 app.use((req: Request, res: Response) => {
