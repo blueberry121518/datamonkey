@@ -57,55 +57,38 @@ export class BuyerAgentService {
    * Agent uses consumer's wallet for payments (all agents share consumer's wallet)
    */
   async createAgent(buyerId: string, data: CreateAgentRequest): Promise<BuyerAgent> {
-    console.log(`[AGENT_DEBUG] createAgent called for consumerId: ${buyerId}, agentName: ${data.name}`)
+    logger.info(`Step 1: Create agent request received for buyerId: ${buyerId}, agentName: ${data.name}`)
     
     // Use consumer's wallet for the agent (all agents share consumer's wallet)
     let walletId: string | undefined
     let walletAddress: string | undefined
 
     try {
-      console.log(`[AGENT_DEBUG] Step 1: Getting consumer wallet for consumerId: ${buyerId}`)
+      logger.info(`Step 2: Getting consumer wallet`)
       let consumerWallet = await this.walletService.getWallet(buyerId)
-      console.log(`[AGENT_DEBUG] Step 1 result:`, {
-        hasWallet: !!consumerWallet,
-        walletId: consumerWallet?.id,
-        walletAddress: consumerWallet?.address,
-      })
+      logger.info(`Step 3: Wallet lookup completed - hasWallet: ${!!consumerWallet}`)
       
       // If consumer doesn't have a wallet, create one automatically
       if (!consumerWallet) {
-        logger.info(`Consumer ${buyerId} does not have a wallet - creating one now`)
-        console.log(`[AGENT_DEBUG] Step 2: Creating wallet for consumerId: ${buyerId}`)
+        logger.info(`Step 4: Consumer has no wallet, creating new wallet`)
         consumerWallet = await this.walletService.createWallet(buyerId, `Data Monkey Wallet - ${buyerId}`)
-        console.log(`[AGENT_DEBUG] Step 2 result:`, {
-          walletId: consumerWallet.id,
-          walletAddress: consumerWallet.address,
-        })
-        logger.info(`Created wallet for consumer: ${consumerWallet.id} (${consumerWallet.address})`)
+        logger.info(`Step 5: Wallet created - walletId: ${consumerWallet.id}, address: ${consumerWallet.address}`)
       }
       
       if (consumerWallet) {
         walletId = consumerWallet.id
         walletAddress = consumerWallet.address
-        console.log(`[AGENT_DEBUG] Step 3: Using wallet for agent:`, {
-          walletId,
-          walletAddress,
-        })
-        logger.info(`Using consumer wallet for agent: ${walletId} (${walletAddress})`)
+        logger.info(`Step 6: Using wallet for agent - walletId: ${walletId}`)
       } else {
-        console.error(`[AGENT_DEBUG] ❌ consumerWallet is null/undefined after creation attempt`)
+        logger.info(`Step 4: Wallet creation failed, throwing error`)
         throw new Error('Failed to create or retrieve consumer wallet')
       }
     } catch (error) {
-      console.error(`[AGENT_DEBUG] ❌ Exception in wallet setup:`, {
-        buyerId,
-        error: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined,
-      })
-      logger.error('Failed to get or create consumer wallet for agent:', error)
+      logger.info(`Step 1: Error in wallet setup: ${error instanceof Error ? error.message : 'Unknown error'}`)
       throw new Error(`Failed to set up wallet for agent: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
 
+    logger.info(`Step 7: Preparing agent data`)
     const agentData = {
       buyer_id: buyerId,
       name: data.name,
@@ -123,15 +106,7 @@ export class BuyerAgentService {
       metadata: {},
     }
 
-    console.log(`[AGENT_DEBUG] Step 4: Inserting agent with data:`, {
-      buyer_id: agentData.buyer_id,
-      name: agentData.name,
-      wallet_id: agentData.wallet_id,
-      wallet_address: agentData.wallet_address,
-      hasWalletId: !!agentData.wallet_id,
-      hasWalletAddress: !!agentData.wallet_address,
-    })
-
+    logger.info(`Step 8: Inserting agent into database`)
     const { data: newAgent, error } = await supabase
       .from('buyer_agents')
       .insert(agentData)
@@ -139,23 +114,11 @@ export class BuyerAgentService {
       .single()
 
     if (error) {
-      console.error(`[AGENT_DEBUG] ❌ Failed to insert agent:`, {
-        error: error.message,
-        code: error.code,
-        details: error.details,
-        agentData,
-      })
+      logger.info(`Step 9: Failed to insert agent: ${error.message}`)
       throw new Error(`Failed to create agent: ${error.message}`)
     }
 
-    console.log(`[AGENT_DEBUG] ✅ Agent created successfully:`, {
-      agentId: newAgent?.id,
-      wallet_id: newAgent?.wallet_id,
-      wallet_address: newAgent?.wallet_address,
-      hasWalletId: !!newAgent?.wallet_id,
-      hasWalletAddress: !!newAgent?.wallet_address,
-    })
-
+    logger.info(`Step 9: Agent created successfully - agentId: ${newAgent?.id}`)
     return newAgent as BuyerAgent
   }
 
@@ -180,37 +143,24 @@ export class BuyerAgentService {
    * Get a single agent
    */
   async getAgent(agentId: string, buyerId?: string): Promise<BuyerAgent> {
-    console.log(`[AGENT_DEBUG] getAgent called for agentId: ${agentId}, buyerId: ${buyerId || 'not provided'}`)
+    logger.info(`Step 1: Get agent request received - agentId: ${agentId}, buyerId: ${buyerId || 'not provided'}`)
     
+    logger.info(`Step 2: Building database query`)
     let query = supabase.from('buyer_agents').select('*').eq('id', agentId)
 
     if (buyerId) {
       query = query.eq('buyer_id', buyerId)
     }
 
+    logger.info(`Step 3: Executing database query`)
     const { data, error } = await query.single()
 
     if (error) {
-      console.error(`[AGENT_DEBUG] ❌ Error fetching agent:`, {
-        agentId,
-        buyerId,
-        error: error.message,
-        code: error.code,
-        details: error.details,
-      })
+      logger.info(`Step 4: Error fetching agent: ${error.message}`)
       throw new Error(`Failed to fetch agent: ${error.message}`)
     }
 
-    console.log(`[AGENT_DEBUG] Agent retrieved:`, {
-      agentId: data?.id,
-      buyer_id: data?.buyer_id,
-      wallet_id: data?.wallet_id,
-      wallet_address: data?.wallet_address,
-      hasWalletId: !!data?.wallet_id,
-      hasWalletAddress: !!data?.wallet_address,
-      status: data?.status,
-    })
-
+    logger.info(`Step 4: Agent retrieved successfully - agentId: ${data?.id}`)
     return data as BuyerAgent
   }
 
@@ -293,49 +243,31 @@ export class BuyerAgentService {
    * Fix agent wallet - updates agent to use consumer's wallet if missing
    */
   async fixAgentWallet(agentId: string, buyerId: string): Promise<BuyerAgent> {
-    console.log(`[AGENT_DEBUG] fixAgentWallet called for agentId: ${agentId}, consumerId: ${buyerId}`)
+    logger.info(`Step 1: Fix agent wallet request received - agentId: ${agentId}, buyerId: ${buyerId}`)
     
+    logger.info(`Step 2: Fetching agent`)
     const agent = await this.getAgent(agentId, buyerId)
-    
-    console.log(`[AGENT_DEBUG] Current agent state:`, {
-      agentId: agent.id,
-      wallet_id: agent.wallet_id,
-      wallet_address: agent.wallet_address,
-      hasWalletId: !!agent.wallet_id,
-    })
+    logger.info(`Step 3: Agent retrieved - hasWalletId: ${!!agent.wallet_id}`)
     
     // If agent already has a wallet, return as-is
     if (agent.wallet_id) {
-      console.log(`[AGENT_DEBUG] ✅ Agent already has wallet, no fix needed`)
+      logger.info(`Step 4: Agent already has wallet, no fix needed`)
       return agent
     }
 
-    console.log(`[AGENT_DEBUG] Step 1: Getting consumer wallet for consumerId: ${buyerId}`)
+    logger.info(`Step 4: Getting consumer wallet`)
     // Get or create consumer's wallet
     let consumerWallet = await this.walletService.getWallet(buyerId)
     
     if (!consumerWallet) {
-      console.log(`[AGENT_DEBUG] Step 2: Consumer has no wallet, creating one...`)
-      logger.info(`Consumer ${buyerId} does not have a wallet - creating one now`)
+      logger.info(`Step 5: Consumer has no wallet, creating new wallet`)
       consumerWallet = await this.walletService.createWallet(buyerId, `Data Monkey Wallet - ${buyerId}`)
-      console.log(`[AGENT_DEBUG] Step 2 result:`, {
-        walletId: consumerWallet.id,
-        walletAddress: consumerWallet.address,
-      })
-      logger.info(`Created wallet for consumer: ${consumerWallet.id} (${consumerWallet.address})`)
+      logger.info(`Step 6: Wallet created - walletId: ${consumerWallet.id}, address: ${consumerWallet.address}`)
     } else {
-      console.log(`[AGENT_DEBUG] Step 2: Consumer has existing wallet:`, {
-        walletId: consumerWallet.id,
-        walletAddress: consumerWallet.address,
-      })
+      logger.info(`Step 5: Consumer has existing wallet - walletId: ${consumerWallet.id}`)
     }
 
-    console.log(`[AGENT_DEBUG] Step 3: Updating agent with wallet:`, {
-      agentId,
-      walletId: consumerWallet.id,
-      walletAddress: consumerWallet.address,
-    })
-
+    logger.info(`Step 7: Updating agent with wallet`)
     // Update agent with consumer's wallet
     const { data: updatedAgent, error } = await supabase
       .from('buyer_agents')
@@ -348,25 +280,11 @@ export class BuyerAgentService {
       .single()
 
     if (error) {
-      console.error(`[AGENT_DEBUG] ❌ Failed to update agent wallet:`, {
-        agentId,
-        error: error.message,
-        code: error.code,
-        details: error.details,
-        walletId: consumerWallet.id,
-      })
+      logger.info(`Step 8: Failed to update agent wallet: ${error.message}`)
       throw new Error(`Failed to update agent wallet: ${error.message}`)
     }
 
-    console.log(`[AGENT_DEBUG] ✅ Agent wallet updated successfully:`, {
-      agentId: updatedAgent?.id,
-      wallet_id: updatedAgent?.wallet_id,
-      wallet_address: updatedAgent?.wallet_address,
-      hasWalletId: !!updatedAgent?.wallet_id,
-      hasWalletAddress: !!updatedAgent?.wallet_address,
-    })
-
-    logger.info(`Fixed wallet for agent ${agentId}: ${consumerWallet.id} (${consumerWallet.address})`)
+    logger.info(`Step 8: Agent wallet updated successfully - walletId: ${updatedAgent?.wallet_id}`)
     return updatedAgent as BuyerAgent
   }
 
@@ -374,9 +292,12 @@ export class BuyerAgentService {
    * Delete an agent
    */
   async deleteAgent(agentId: string, buyerId: string): Promise<void> {
+    logger.info(`Step 1: Delete agent request received - agentId: ${agentId}`)
+    logger.info(`Step 2: Verifying agent ownership`)
     // Verify ownership
     await this.getAgent(agentId, buyerId)
 
+    logger.info(`Step 3: Deleting agent from database`)
     const { error } = await supabase
       .from('buyer_agents')
       .delete()
@@ -384,10 +305,11 @@ export class BuyerAgentService {
       .eq('buyer_id', buyerId)
 
     if (error) {
+      logger.info(`Step 4: Error deleting agent: ${error.message}`)
       throw new Error(`Failed to delete agent: ${error.message}`)
     }
 
-    logger.info(`Deleted agent ${agentId} for buyer ${buyerId}`)
+    logger.info(`Step 4: Agent deleted successfully`)
   }
 }
 

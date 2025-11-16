@@ -140,6 +140,8 @@ export class DataStorageService {
     datasetListingId: string | null,
     sampleSize: number = 10
   ): Promise<Array<Record<string, any>>> {
+    logger.info(`[DataStorageService] getSampleRecords - sellerId: ${sellerId}, datasetListingId: ${datasetListingId || 'NULL'}, sampleSize: ${sampleSize}`)
+    
     let queryBuilder = supabase
       .from('seller_data_storage')
       .select('data_record')
@@ -148,15 +150,25 @@ export class DataStorageService {
 
     if (datasetListingId) {
       queryBuilder = queryBuilder.eq('dataset_listing_id', datasetListingId)
+      logger.info(`[DataStorageService] Filtering for structured dataset: ${datasetListingId}`)
+    } else {
+      // When datasetListingId is null, fetch warehouse data (where dataset_listing_id IS NULL)
+      queryBuilder = queryBuilder.is('dataset_listing_id', null)
+      logger.info(`[DataStorageService] Filtering for warehouse data (dataset_listing_id IS NULL)`)
     }
 
     const { data, error } = await queryBuilder.order('created_at', { ascending: false })
 
     if (error) {
+      logger.error(`[DataStorageService] Error fetching sample records: ${error.message}`)
       throw new Error(`Failed to get sample records: ${error.message}`)
     }
 
-    return (data || []).map((d) => d.data_record)
+    logger.info(`[DataStorageService] Retrieved ${data?.length || 0} records from database`)
+    const records = (data || []).map((d) => d.data_record)
+    logger.info(`[DataStorageService] Returning ${records.length} data records`)
+
+    return records
   }
 
   /**
@@ -176,6 +188,9 @@ export class DataStorageService {
 
     if (datasetListingId) {
       queryBuilder = queryBuilder.eq('dataset_listing_id', datasetListingId)
+    } else {
+      // When datasetListingId is null, fetch warehouse data (where dataset_listing_id IS NULL)
+      queryBuilder = queryBuilder.is('dataset_listing_id', null)
     }
 
     const { data, error } = await queryBuilder.order('created_at', { ascending: false })

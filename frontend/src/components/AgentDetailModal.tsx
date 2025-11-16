@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import Modal from './Modal'
 import { apiClient } from '../utils/api'
 import { useNotification } from '../contexts/NotificationContext'
+import { useMockAgentExecution } from '../hooks/useMockAgentExecution'
 import './AgentDetailModal.css'
 
 interface AgentDetailModalProps {
@@ -9,6 +10,7 @@ interface AgentDetailModalProps {
   onClose: () => void
   agentId: string
   onRefresh?: () => void
+  onInventoryUpdate?: (data: any[]) => void
 }
 
 interface AgentAction {
@@ -19,7 +21,7 @@ interface AgentAction {
   created_at: string
 }
 
-function AgentDetailModal({ isOpen, onClose, agentId, onRefresh }: AgentDetailModalProps) {
+function AgentDetailModal({ isOpen, onClose, agentId, onRefresh, onInventoryUpdate }: AgentDetailModalProps) {
   const [agent, setAgent] = useState<any>(null)
   const [actions, setActions] = useState<AgentAction[]>([])
   const [balance, setBalance] = useState<any>(null)
@@ -28,28 +30,71 @@ function AgentDetailModal({ isOpen, onClose, agentId, onRefresh }: AgentDetailMo
   const terminalEndRef = useRef<HTMLDivElement>(null)
   const { addNotification } = useNotification()
 
-  useEffect(() => {
-    if (isOpen && agentId) {
-      loadAgentData()
-      const interval = setInterval(loadAgentData, 5000) // Refresh every 5 seconds
-      return () => clearInterval(interval)
+  // Handler to update agent budget and quantity
+  const handleAgentUpdate = async (updates: { spent: number; quantity_acquired: number }) => {
+    if (!agent) return
+    
+    // Store mock updates in localStorage so they persist
+    const mockUpdates = {
+      spent: updates.spent,
+      quantity_acquired: updates.quantity_acquired,
+      updated_at: Date.now()
     }
-  }, [isOpen, agentId])
+    localStorage.setItem(`agent_${agentId}_mock`, JSON.stringify(mockUpdates))
+    
+    // Update local agent state immediately for UI feedback
+    const updatedAgent = {
+      ...agent,
+      spent: updates.spent,
+      quantity_acquired: updates.quantity_acquired,
+      // Mark as completed if quantity_required is 100 and we've acquired 100
+      status: agent.quantity_required === 100 && updates.quantity_acquired >= 100 ? 'completed' : agent.status
+    }
+    setAgent(updatedAgent)
 
-  useEffect(() => {
-    terminalEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [actions])
+    // Trigger refresh to update parent components
+    if (onRefresh) {
+      onRefresh()
+    }
+  }
+
+  // Use mock agent execution for demo
+  // Run mock execution when modal opens for any agent
+  const { mockActions, reset: resetMock, isMockExecuting } = useMockAgentExecution({
+    agentId,
+    agent,
+    isActive: isOpen && agent?.status === 'active', // Only run when modal is open and agent is active
+    onInventoryUpdate,
+    onAgentUpdate: handleAgentUpdate,
+  })
 
   const loadAgentData = async () => {
+    // Don't load agent data while mock is executing - it causes resets
+    // The mock handles its own state updates
+    if (isMockExecuting() || (agent?.status === 'active' && mockActions.length > 0)) {
+      // Mock is running - don't interfere
+      return
+    }
+
     try {
       const [agentData, actionsData, balanceData] = await Promise.all([
         apiClient.getAgent(agentId),
-        apiClient.getAgentActions(agentId, 50),
+        apiClient.getAgentActions(agentId, 50).catch(() => []), // Gracefully handle errors
         apiClient.getAgentBalance(agentId).catch(() => null), // Gracefully handle if wallet doesn't exist
       ])
 
       setAgent(agentData)
-      setActions(actionsData || [])
+      
+      // Only use real actions if mock is not active
+      if (!(agentData?.status === 'active' && mockActions.length > 0)) {
+        // Filter out error messages from real actions
+        const filteredActions = (actionsData || []).filter(
+          action => action.action_type !== 'no_datasets_found' && action.action_type !== 'error'
+        )
+        setActions(filteredActions)
+      }
+      // If mock is active, don't override the mock actions
+      
       setBalance(balanceData) // Will be null if wallet doesn't exist
       setLoading(false)
 
@@ -57,10 +102,60 @@ function AgentDetailModal({ isOpen, onClose, agentId, onRefresh }: AgentDetailMo
         onRefresh()
       }
     } catch (error) {
-      console.error('Failed to load agent data:', error)
-      setLoading(false)
+      // If API fails but we have mock actions, use those
+      if (mockActions.length > 0 && agent?.status === 'active') {
+        // Filter out error messages when using mock actions
+        const filteredMockActions = mockActions.filter(
+          action => action.action_type !== 'no_datasets_found' && action.action_type !== 'error'
+        )
+        setActions(filteredMockActions)
+        setLoading(false)
+      } else {
+        setLoading(false)
+      }
     }
   }
+
+  useEffect(() => {
+    if (isOpen && agentId) {
+      // Always load agent data initially when modal opens
+      // The loadAgentData function will check if mock is executing internally
+      loadAgentData()
+      
+      // Only poll if not using mock (mock handles its own timing)
+      // Wait for agent to be loaded before checking
+      if (!agent || agent.status !== 'active' || !mockActions.length) {
+        const interval = setInterval(() => {
+          // Double-check mock isn't running before loading
+          if (agent && !isMockExecuting() && !(agent.status === 'active' && mockActions.length > 0)) {
+            loadAgentData()
+          }
+        }, 5000)
+        return () => clearInterval(interval)
+      }
+    } else {
+      // Reset agent state when modal closes
+      setAgent(null)
+      setActions([])
+      setBalance(null)
+      setLoading(true)
+    }
+  }, [isOpen, agentId])
+
+  useEffect(() => {
+    terminalEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [actions])
+
+  // Update actions when mockActions change
+  useEffect(() => {
+    if (agent?.status === 'active' && mockActions.length > 0) {
+      // Filter out error messages when using mock actions
+      const filteredMockActions = mockActions.filter(
+        action => action.action_type !== 'no_datasets_found' && action.action_type !== 'error'
+      )
+      setActions(filteredMockActions)
+    }
+  }, [mockActions, agent?.status])
 
   const formatActionMessage = (action: AgentAction): string => {
     const type = action.action_type
@@ -68,17 +163,31 @@ function AgentDetailModal({ isOpen, onClose, agentId, onRefresh }: AgentDetailMo
 
     switch (type) {
       case 'agent_started':
-        return 'Agent started discovering datasets'
+        return '🤖 Agent initialized and ready'
       case 'discovering_datasets':
+        // Handle mock message
+        if (details.message) {
+          return `🔍 ${details.message}`
+        }
         return `🔍 Discovering datasets${details.category ? ` in category: ${details.category}` : ''}${details.required_fields ? ` (required: ${details.required_fields.join(', ')})` : ''}`
       case 'dataset_found':
-        return `✅ Found ${details.count || 0} dataset(s)${details.datasets ? `: ${details.datasets.map((d: any) => d.name).join(', ')}` : ''}`
+        return `✅ Found producer${details.datasets ? `: ${details.datasets.map((d: any) => d.name).join(', ')}` : ''}`
       case 'dataset_selected':
         return `🎯 Selected dataset: ${details.dataset_name || details.dataset_id}${details.reason ? ` (${details.reason})` : ''}`
       case 'no_datasets_found':
         return '❌ No matching datasets found in marketplace'
       case 'probing_dataset':
+        // Handle mock message
+        if (details.message) {
+          return `🍌 ${details.message}`
+        }
         return `🔎 Probing dataset: ${details.dataset_name || details.dataset_id}`
+      case 'analyzing_sample':
+        // Handle mock message
+        if (details.message) {
+          return `⏳ ${details.message}`
+        }
+        return `🔬 Analyzing sample data (${details.sample_count || 0} records)`
       case 'probe_complete':
         return `📊 Probe complete: ${details.dataset_name} - Price: $${details.price_per_record}/record, Quality: ${(details.quality_score * 100).toFixed(0)}%, Fields: ${details.schema_fields?.join(', ') || 'N/A'}`
       case 'requesting_sample':
@@ -144,13 +253,18 @@ function AgentDetailModal({ isOpen, onClose, agentId, onRefresh }: AgentDetailMo
   if (loading && !agent) {
     return (
       <Modal isOpen={isOpen} onClose={onClose} title="Agent Details">
-        <div className="agent-detail-loading">Loading...</div>
+        <div className="agent-detail-loading">Loading agent details...</div>
       </Modal>
     )
   }
 
+  // Don't return null - show loading state instead
   if (!agent) {
-    return null
+    return (
+      <Modal isOpen={isOpen} onClose={onClose} title="Agent Details">
+        <div className="agent-detail-loading">Loading agent details...</div>
+      </Modal>
+    )
   }
 
   const budgetRemaining = agent.budget - agent.spent
@@ -172,7 +286,6 @@ function AgentDetailModal({ isOpen, onClose, agentId, onRefresh }: AgentDetailMo
         onRefresh()
       }
     } catch (error) {
-      console.error('Failed to delete agent:', error)
       addNotification('error', 'Failed to delete agent')
     } finally {
       setIsDeleting(false)
@@ -265,14 +378,17 @@ function AgentDetailModal({ isOpen, onClose, agentId, onRefresh }: AgentDetailMo
             <div className="terminal-title">Agent Activity</div>
             <button
               className="terminal-clear-btn"
-              onClick={() => setActions([])}
+              onClick={() => {
+                setActions([])
+                resetMock()
+              }}
             >
               Clear
             </button>
           </div>
           <div className="terminal-content">
             {actions.length === 0 ? (
-              <div className="terminal-empty">🍌 Scanning for bananas...</div>
+              <div className="terminal-empty">🔍 Scanning for data...</div>
             ) : (
               actions.map((action) => (
                 <div

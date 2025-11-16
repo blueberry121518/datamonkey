@@ -16,11 +16,6 @@ router.post(
 router.post('/', authenticate, agentController.createAgent.bind(agentController))
 router.get('/', authenticate, agentController.getMyAgents.bind(agentController))
 router.get('/:id', authenticate, agentController.getAgent.bind(agentController))
-router.patch(
-  '/:id/status',
-  authenticate,
-  agentController.updateAgentStatus.bind(agentController)
-)
 router.get(
   '/:id/balance',
   authenticate,
@@ -35,11 +30,6 @@ router.post(
   '/:id/stop',
   authenticate,
   agentController.stopAgent.bind(agentController)
-)
-router.post(
-  '/:id/fix-wallet',
-  authenticate,
-  agentController.fixAgentWallet.bind(agentController)
 )
 router.delete(
   '/:id',

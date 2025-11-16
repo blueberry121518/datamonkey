@@ -10,26 +10,14 @@ const fileUploadController = new FileUploadController()
 router.post(
   '/upload',
   authenticate,
-  upload.array('files', 10), // Max 10 files at once
+  upload.array('files', 10),
   fileUploadController.uploadFiles.bind(fileUploadController)
-)
-
-router.get(
-  '/view',
-  authenticate,
-  fileUploadController.viewAllData.bind(fileUploadController)
-)
-
-router.get(
-  '/records',
-  authenticate,
-  fileUploadController.getDataRecords.bind(fileUploadController)
 )
 
 router.post(
   '/suggest-metadata',
   authenticate,
-  upload.array('files', 1), // Single file for metadata suggestion
+  upload.array('files', 1),
   fileUploadController.suggestMetadata.bind(fileUploadController)
 )
 

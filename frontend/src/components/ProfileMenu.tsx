@@ -35,7 +35,6 @@ function ProfileMenu({ user, onLogout }: ProfileMenuProps) {
       onLogout()
     } else if (action === 'settings') {
       // TODO: Navigate to settings
-      console.log('Settings clicked')
     } else if (action === 'docs') {
       // TODO: Open docs
       window.open('https://docs.datamonkey.com', '_blank')

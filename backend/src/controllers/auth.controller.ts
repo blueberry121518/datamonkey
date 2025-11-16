@@ -2,6 +2,7 @@ import { Request, Response } from 'express'
 import { AuthService } from '../services/auth.service.js'
 import { SignupRequest, LoginRequest, WalletAuthRequest, NonceRequest } from '../types/auth.js'
 import { z } from 'zod'
+import logger from '../utils/logger.js'
 
 const authService = new AuthService()
 
@@ -33,11 +34,17 @@ export class AuthController {
    */
   async signup(req: Request, res: Response): Promise<void> {
     try {
+      logger.info(`Step 1: Signup request received`)
       // Validate request body
+      logger.info(`Step 2: Validating request body`)
       const validatedData = signupSchema.parse(req.body) as SignupRequest
+      logger.info(`Step 3: Request body validated successfully`)
 
       // Create user
+      logger.info(`Step 4: Creating user account`)
       const result = await authService.signup(validatedData)
+      logger.info(`Step 5: User account created successfully - userId: ${result.user.id}`)
+      logger.info(`Step 6: Returning success response`)
 
       res.status(201).json({
         success: true,
@@ -46,6 +53,8 @@ export class AuthController {
       })
     } catch (error) {
       if (error instanceof z.ZodError) {
+        logger.info(`Step 1: Validation error occurred`)
+        logger.info(`Step 2: Returning 400 validation error response`)
         res.status(400).json({
           success: false,
           error: 'Validation error',
@@ -56,6 +65,8 @@ export class AuthController {
 
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
       const statusCode = errorMessage.includes('already exists') ? 409 : 500
+      logger.info(`Step 1: Error occurred: ${errorMessage}`)
+      logger.info(`Step 2: Returning ${statusCode} error response`)
 
       res.status(statusCode).json({
         success: false,
@@ -70,11 +81,17 @@ export class AuthController {
    */
   async login(req: Request, res: Response): Promise<void> {
     try {
+      logger.info(`Step 1: Login request received`)
       // Validate request body
+      logger.info(`Step 2: Validating request body`)
       const validatedData = loginSchema.parse(req.body) as LoginRequest
+      logger.info(`Step 3: Request body validated successfully`)
 
       // Authenticate user
+      logger.info(`Step 4: Authenticating user credentials`)
       const result = await authService.login(validatedData)
+      logger.info(`Step 5: User authenticated successfully - userId: ${result.user.id}`)
+      logger.info(`Step 6: Returning success response`)
 
       res.status(200).json({
         success: true,
@@ -83,6 +100,8 @@ export class AuthController {
       })
     } catch (error) {
       if (error instanceof z.ZodError) {
+        logger.info(`Step 1: Validation error occurred`)
+        logger.info(`Step 2: Returning 400 validation error response`)
         res.status(400).json({
           success: false,
           error: 'Validation error',
@@ -93,6 +112,8 @@ export class AuthController {
 
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
       const statusCode = errorMessage.includes('Invalid') ? 401 : 500
+      logger.info(`Step 1: Error occurred: ${errorMessage}`)
+      logger.info(`Step 2: Returning ${statusCode} error response`)
 
       res.status(statusCode).json({
         success: false,
@@ -107,21 +128,16 @@ export class AuthController {
    */
   async generateNonce(req: Request, res: Response): Promise<void> {
     try {
-      const logger = (await import('../utils/logger.js')).default
-      logger.info('AuthController: generateNonce request', { 
-        body: req.body,
-        ip: req.ip 
-      })
-
+      logger.info(`Step 1: Generate nonce request received`)
       // Validate request body
+      logger.info(`Step 2: Validating wallet address`)
       const validatedData = nonceRequestSchema.parse(req.body) as NonceRequest
-
-      logger.info('AuthController: Generating nonce', { 
-        walletAddress: validatedData.walletAddress 
-      })
+      logger.info(`Step 3: Wallet address validated: ${validatedData.walletAddress}`)
 
       // Generate nonce
+      logger.info(`Step 4: Generating nonce for wallet`)
       const nonce = authService.generateNonce(validatedData.walletAddress)
+      logger.info(`Step 5: Nonce generated successfully`)
 
       // Get the domain for the message
       const domain = process.env.AUTH_DOMAIN || 'localhost:8000'
@@ -131,12 +147,9 @@ Wallet Address: ${validatedData.walletAddress.toLowerCase()}
 Nonce: ${nonce}
 
 This request will not trigger a blockchain transaction or cost any gas fees.`
+      logger.info(`Step 6: Authentication message created`)
 
-      logger.info('AuthController: Nonce generated successfully', { 
-        walletAddress: validatedData.walletAddress,
-        nonceLength: nonce.length 
-      })
-
+      logger.info(`Step 7: Returning nonce response`)
       res.status(200).json({
         success: true,
         data: {
@@ -147,6 +160,8 @@ This request will not trigger a blockchain transaction or cost any gas fees.`
       })
     } catch (error) {
       if (error instanceof z.ZodError) {
+        logger.info(`Step 1: Validation error occurred`)
+        logger.info(`Step 2: Returning 400 validation error response`)
         res.status(400).json({
           success: false,
           error: 'Validation error',
@@ -156,6 +171,8 @@ This request will not trigger a blockchain transaction or cost any gas fees.`
       }
 
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      logger.info(`Step 1: Error occurred: ${errorMessage}`)
+      logger.info(`Step 2: Returning 500 error response`)
       res.status(500).json({
         success: false,
         error: errorMessage,
@@ -169,33 +186,22 @@ This request will not trigger a blockchain transaction or cost any gas fees.`
    */
   async walletLogin(req: Request, res: Response): Promise<void> {
     try {
-      const logger = (await import('../utils/logger.js')).default
-      logger.info('AuthController: walletLogin request', { 
-        walletAddress: req.body?.walletAddress,
-        hasSignature: !!req.body?.signature,
-        hasNonce: !!req.body?.nonce,
-        ip: req.ip 
-      })
-
+      logger.info(`Step 1: Wallet login request received`)
       // Validate request body
+      logger.info(`Step 2: Validating wallet authentication data`)
       const validatedData = walletAuthSchema.parse(req.body) as WalletAuthRequest
-
-      logger.info('AuthController: Authenticating wallet', { 
-        walletAddress: validatedData.walletAddress,
-        nonce: validatedData.nonce.substring(0, 10) + '...'
-      })
+      logger.info(`Step 3: Wallet authentication data validated`)
 
       // Authenticate with wallet
+      logger.info(`Step 4: Verifying wallet signature`)
       const result = await authService.authenticateWithWallet(
         validatedData.walletAddress,
         validatedData.signature,
         validatedData.nonce
       )
-
-      logger.info('AuthController: Wallet authentication successful', { 
-        userId: result.user.id,
-        walletAddress: validatedData.walletAddress 
-      })
+      logger.info(`Step 5: Wallet signature verified successfully`)
+      logger.info(`Step 6: User authenticated - userId: ${result.user.id}`)
+      logger.info(`Step 7: Returning success response`)
 
       res.status(200).json({
         success: true,
@@ -204,6 +210,8 @@ This request will not trigger a blockchain transaction or cost any gas fees.`
       })
     } catch (error) {
       if (error instanceof z.ZodError) {
+        logger.info(`Step 1: Validation error occurred`)
+        logger.info(`Step 2: Returning 400 validation error response`)
         res.status(400).json({
           success: false,
           error: 'Validation error',
@@ -219,6 +227,8 @@ This request will not trigger a blockchain transaction or cost any gas fees.`
         errorMessage.includes('failed') 
           ? 401 
           : 500
+      logger.info(`Step 1: Error occurred: ${errorMessage}`)
+      logger.info(`Step 2: Returning ${statusCode} error response`)
 
       res.status(statusCode).json({
         success: false,

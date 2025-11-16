@@ -219,7 +219,6 @@ function LaunchAgentModal({ isOpen, onClose, onSuccess }: LaunchAgentModalProps)
       const errorMessage = err instanceof Error ? err.message : 'Failed to launch agent'
       addNotification('error', `Error: ${errorMessage}`)
       setError(errorMessage)
-      console.error('Failed to launch agent:', err)
     } finally {
       setLoading(false)
     }
@@ -249,7 +248,7 @@ function LaunchAgentModal({ isOpen, onClose, onSuccess }: LaunchAgentModalProps)
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="Launch Agent">
+    <Modal isOpen={isOpen} onClose={handleClose} title="Launch Monkey">
       <div className="launch-agent-modal">
         {/* Command Input Section */}
         <div className="command-section">
@@ -532,7 +531,7 @@ function LaunchAgentModal({ isOpen, onClose, onSuccess }: LaunchAgentModalProps)
             onClick={handleSubmit}
             disabled={loading || isAutoFilling || !formData.name.trim() || !formData.goal.trim()}
           >
-            {loading ? 'Launching...' : 'Launch Agent'}
+            {loading ? 'Launching...' : 'Launch Monkey'}
           </button>
         </div>
       </div>

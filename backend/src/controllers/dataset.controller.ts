@@ -1,6 +1,6 @@
 import { Request, Response } from 'express'
 import { DatasetService } from '../services/dataset.service.js'
-import { CreateDatasetRequest, UpdateDatasetRequest } from '../types/dataset.js'
+import { CreateDatasetRequest } from '../types/dataset.js'
 import { z } from 'zod'
 import logger from '../utils/logger.js'
 
@@ -21,18 +21,6 @@ const createDatasetSchema = z.object({
   endpoint_url: z.string().url().optional(),
 })
 
-const updateDatasetSchema = z.object({
-  name: z.string().min(1).max(255).optional(),
-  description: z.string().max(2000).optional(),
-  category: z.string().max(100).optional(),
-  price_per_record: z.number().min(0).optional(),
-  metadata: z.record(z.any()).optional(),
-  schema: z.record(z.any()).optional(),
-  total_rows: z.number().int().positive().optional(),
-  quality_score: z.number().min(0).max(1).optional(),
-  content_summary: z.string().optional(),
-  is_active: z.boolean().optional(),
-})
 
 export class DatasetController {
   /**
@@ -92,10 +80,11 @@ export class DatasetController {
         return
       }
 
-      logger.info(`[DatasetController] getMyDatasets called for user: ${req.userId}`)
+      logger.info(`Step 1: Get my datasets request received for user: ${req.userId}`)
+      logger.info(`Step 2: Fetching seller datasets`)
       const datasets = await datasetService.getSellerDatasets(req.userId)
-      logger.info(`[DatasetController] Found ${datasets?.length || 0} datasets for user ${req.userId}`)
-      logger.info(`[DatasetController] Datasets:`, JSON.stringify(datasets, null, 2))
+      logger.info(`Step 3: Found ${datasets?.length || 0} datasets`)
+      logger.info(`Step 4: Returning datasets response`)
 
       // Disable caching to ensure fresh data
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
@@ -108,7 +97,8 @@ export class DatasetController {
       })
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-      logger.error(`[DatasetController] getMyDatasets error:`, error)
+      logger.info(`Step 1: Error getting datasets: ${errorMessage}`)
+      logger.info(`Step 2: Returning 500 error response`)
       res.status(500).json({
         success: false,
         error: errorMessage,
@@ -142,85 +132,6 @@ export class DatasetController {
     }
   }
 
-  /**
-   * Update a dataset listing
-   * PUT /api/datasets/:id
-   */
-  async updateDataset(req: Request, res: Response): Promise<void> {
-    try {
-      if (!req.userId) {
-        res.status(401).json({
-          success: false,
-          error: 'Unauthorized',
-        })
-        return
-      }
-
-      const { id } = req.params
-
-      // Validate request body
-      const validatedData = updateDatasetSchema.parse(req.body) as UpdateDatasetRequest
-
-      // Update dataset
-      const dataset = await datasetService.updateDataset(id, req.userId, validatedData)
-
-      res.status(200).json({
-        success: true,
-        data: dataset,
-        message: 'Dataset updated successfully',
-      })
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        res.status(400).json({
-          success: false,
-          error: 'Validation error',
-          details: error.errors,
-        })
-        return
-      }
-
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-      const statusCode = errorMessage.includes('not found') ? 404 : 500
-
-      res.status(statusCode).json({
-        success: false,
-        error: errorMessage,
-      })
-    }
-  }
-
-  /**
-   * Delete a dataset listing
-   * DELETE /api/datasets/:id
-   */
-  async deleteDataset(req: Request, res: Response): Promise<void> {
-    try {
-      if (!req.userId) {
-        res.status(401).json({
-          success: false,
-          error: 'Unauthorized',
-        })
-        return
-      }
-
-      const { id } = req.params
-
-      await datasetService.deleteDataset(id, req.userId)
-
-      res.status(200).json({
-        success: true,
-        message: 'Dataset deleted successfully',
-      })
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-      const statusCode = errorMessage.includes('not found') ? 404 : 500
-
-      res.status(statusCode).json({
-        success: false,
-        error: errorMessage,
-      })
-    }
-  }
 
   /**
    * Get all active datasets (for marketplace discovery)
@@ -281,9 +192,13 @@ export class DatasetController {
       const { DataStorageService } = await import('../services/data-storage.service.js')
       const dataStorageService = new DataStorageService()
       
+      // For virtual warehouse endpoints, fetch data where dataset_listing_id IS NULL
+      // For structured datasets, fetch data linked to dataset.id
+      const datasetListingId = dataset.id.startsWith('warehouse-') ? null : dataset.id
+      
       const actualData = await dataStorageService.getDataRecords(
         dataset.seller_id,
-        dataset.id,
+        datasetListingId,
         quantity,
         0
       )
@@ -510,17 +425,28 @@ export class DatasetController {
       const { id } = req.params
       const sampleSize = parseInt(req.query.size as string) || 10
 
+      logger.info(`[DatasetController] getDatasetSample called - datasetId: ${id}, sampleSize: ${sampleSize}, userId: ${req.userId}`)
+
       // Verify dataset belongs to user
       const dataset = await datasetService.getDatasetById(id, req.userId)
+      logger.info(`[DatasetController] Dataset found - name: ${dataset.name}, seller_id: ${dataset.seller_id}, is_warehouse: ${dataset.id.startsWith('warehouse-')}`)
 
       // Get sample records
       const { DataStorageService } = await import('../services/data-storage.service.js')
       const dataStorageService = new DataStorageService()
+      
+      // For virtual warehouse endpoints, fetch data where dataset_listing_id IS NULL
+      // For structured datasets, fetch data linked to dataset.id
+      const datasetListingId = dataset.id.startsWith('warehouse-') ? null : dataset.id
+      logger.info(`[DatasetController] Fetching records - seller_id: ${dataset.seller_id}, dataset_listing_id: ${datasetListingId || 'NULL (warehouse)'}, sampleSize: ${sampleSize}`)
+      
       const samples = await dataStorageService.getSampleRecords(
         dataset.seller_id,
-        dataset.id,
+        datasetListingId,
         sampleSize
       )
+
+      logger.info(`[DatasetController] Retrieved ${samples.length} sample records`)
 
       res.status(200).json({
         success: true,
@@ -528,8 +454,98 @@ export class DatasetController {
       })
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      logger.error(`[DatasetController] Error in getDatasetSample: ${errorMessage}`)
       const statusCode = errorMessage.includes('not found') ? 404 : 500
       res.status(statusCode).json({
+        success: false,
+        error: errorMessage,
+      })
+    }
+  }
+
+  /**
+   * Get seller statistics (sales, revenue, etc.)
+   * GET /api/datasets/stats
+   */
+  async getSellerStats(req: Request, res: Response): Promise<void> {
+    try {
+      if (!req.userId) {
+        res.status(401).json({
+          success: false,
+          error: 'Unauthorized',
+        })
+        return
+      }
+
+      // Get active endpoints count
+      const allDatasets = await datasetService.getSellerDatasets(req.userId)
+      const activeEndpoints = allDatasets.filter(d => d.is_active).length
+
+      // Get sales stats from agent actions
+      const { AgentActionService } = await import('../services/agent-action.service.js')
+      const actionService = new AgentActionService()
+      const salesStats = await actionService.getSellerStats(req.userId)
+
+      res.status(200).json({
+        success: true,
+        data: {
+          totalSales: salesStats.totalSales,
+          totalRevenue: salesStats.totalRevenue,
+          activeEndpoints,
+          totalRecordsSold: salesStats.totalRecordsSold,
+          recentSales: salesStats.recentSales,
+        },
+      })
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      res.status(500).json({
+        success: false,
+        error: errorMessage,
+      })
+    }
+  }
+
+  /**
+   * Get records sold for a specific dataset
+   * GET /api/datasets/:id/records-sold
+   */
+  async getDatasetRecordsSold(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params
+      
+      if (!id) {
+        res.status(400).json({
+          success: false,
+          error: 'Dataset ID required',
+        })
+        return
+      }
+
+      // For virtual warehouse endpoints, use the warehouse-{sellerId} format for querying
+      // The interactions are stored with the dataset ID used in the purchase
+      const { AgentActionService } = await import('../services/agent-action.service.js')
+      const actionService = new AgentActionService()
+      const interactions = await actionService.getDatasetInteractions(id, 1000)
+      
+      // Count records sold from purchase_complete actions
+      let recordsSold = 0
+      interactions.forEach((action) => {
+        if (action.action_type === 'purchase_complete' && action.status === 'success') {
+          const details = action.details as Record<string, any>
+          const quantity = parseInt(details?.quantity || '0')
+          recordsSold += quantity
+        }
+      })
+
+      res.status(200).json({
+        success: true,
+        data: {
+          recordsSold,
+        },
+      })
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      res.status(500).json({
         success: false,
         error: errorMessage,
       })

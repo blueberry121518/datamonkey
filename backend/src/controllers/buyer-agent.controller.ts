@@ -10,6 +10,14 @@ const buyerAgentService = new BuyerAgentService()
 const llmParsingService = new LLMParsingService()
 const agentExecutionService = new AgentExecutionService()
 
+// Register cleanup on shutdown (no circular dependency)
+process.once('SIGTERM', () => {
+  agentExecutionService.stopAllAgents()
+})
+process.once('SIGINT', () => {
+  agentExecutionService.stopAllAgents()
+})
+
 const createAgentSchema = z.object({
   name: z.string().min(1).max(255),
   description: z.string().optional(),
@@ -52,9 +60,11 @@ export class BuyerAgentController {
       const agent = await buyerAgentService.createAgent(req.userId, agentData)
 
       // Start agent execution in background
+      logger.info(`Step 6: Starting agent execution in background`)
       agentExecutionService.startAgent(agent.id).catch((error) => {
-        logger.error(`Failed to start agent ${agent.id}:`, error)
+        logger.info(`Step 7: Failed to start agent: ${error instanceof Error ? error.message : 'Unknown error'}`)
       })
+      logger.info(`Step 7: Agent execution started`)
 
       res.status(201).json({
         success: true,
@@ -134,52 +144,6 @@ export class BuyerAgentController {
     }
   }
 
-  /**
-   * Update agent status
-   * PATCH /api/agents/:id/status
-   */
-  async updateAgentStatus(req: Request, res: Response): Promise<void> {
-    try {
-      if (!req.userId) {
-        res.status(401).json({
-          success: false,
-          error: 'Unauthorized',
-        })
-        return
-      }
-
-      const { id } = req.params
-      const { status } = req.body
-
-      if (!['active', 'paused', 'completed', 'failed'].includes(status)) {
-        res.status(400).json({
-          success: false,
-          error: 'Invalid status',
-        })
-        return
-      }
-
-      const agent = await buyerAgentService.updateAgentStatus(
-        id,
-        req.userId,
-        status
-      )
-
-      res.status(200).json({
-        success: true,
-        data: agent,
-        message: 'Agent status updated',
-      })
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-      const statusCode = errorMessage.includes('not found') ? 404 : 500
-
-      res.status(statusCode).json({
-        success: false,
-        error: errorMessage,
-      })
-    }
-  }
 
   /**
    * Get agent wallet balance
@@ -202,12 +166,12 @@ export class BuyerAgentController {
 
       // If agent doesn't have a wallet, try to fix it automatically
       if (!agent.wallet_id) {
-        console.log(`[CONTROLLER_DEBUG] Agent ${id} has no wallet_id, attempting to fix...`)
+        logger.info(`Step 3: Agent has no wallet_id, attempting to fix`)
         try {
           agent = await buyerAgentService.fixAgentWallet(id, req.userId)
-          console.log(`[CONTROLLER_DEBUG] ✅ Fixed wallet for agent ${id}: ${agent.wallet_id}`)
+          logger.info(`Step 4: Wallet fixed successfully - walletId: ${agent.wallet_id}`)
         } catch (fixError) {
-          console.error(`[CONTROLLER_DEBUG] ❌ Failed to fix wallet:`, fixError)
+          logger.info(`Step 4: Failed to fix wallet: ${fixError instanceof Error ? fixError.message : 'Unknown error'}`)
           res.status(200).json({
             success: true,
             data: null,
@@ -266,11 +230,8 @@ export class BuyerAgentController {
         return
       }
 
-      logger.info('Generating agent config', {
-        userId: req.userId,
-        hasFile: !!file,
-        filename: file?.originalname,
-      })
+      logger.info(`Step 1: Generate agent config request received`)
+      logger.info(`Step 2: User ID: ${req.userId}, Has file: ${!!file}, Filename: ${file?.originalname || 'none'}`)
 
       let exampleFile: {
         filename: string
@@ -300,7 +261,8 @@ export class BuyerAgentController {
         message: 'Agent configuration generated successfully',
       })
     } catch (error) {
-      logger.error('Failed to generate agent config:', error)
+      logger.info(`Step 1: Error generating agent config: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      logger.info(`Step 2: Returning 500 error response`)
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
       res.status(500).json({
         success: false,
@@ -396,9 +358,11 @@ export class BuyerAgentController {
       }
 
       const { id } = req.params
-      console.log(`[CONTROLLER_DEBUG] Manual wallet fix requested for agent ${id}`)
-      
+      logger.info(`Step 1: Manual wallet fix request received for agent: ${id}`)
+      logger.info(`Step 2: Fixing agent wallet`)
       const agent = await buyerAgentService.fixAgentWallet(id, req.userId)
+      logger.info(`Step 3: Wallet fixed successfully - walletId: ${agent.wallet_id}`)
+      logger.info(`Step 4: Returning success response`)
 
       res.status(200).json({
         success: true,

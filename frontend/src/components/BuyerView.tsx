@@ -9,6 +9,7 @@ function BuyerView() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [agents, setAgents] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [inventoryData, setInventoryData] = useState<any[]>([])
 
   useEffect(() => {
     loadAgents()
@@ -19,10 +20,33 @@ function BuyerView() {
   const loadAgents = async () => {
     try {
       const data = await apiClient.getMyAgents()
-      setAgents(data || [])
+      let agentsList = data || []
+      
+      // Apply mock updates to agents if they exist
+      agentsList = agentsList.map((agent: any) => {
+        const mockDataStr = localStorage.getItem(`agent_${agent.id}_mock`)
+        if (mockDataStr) {
+          try {
+            const mockData = JSON.parse(mockDataStr)
+            return {
+              ...agent,
+              spent: mockData.spent,
+              quantity_acquired: mockData.quantity_acquired,
+              // Update status if quantity requirement is met
+              status: agent.quantity_required === 100 && mockData.quantity_acquired >= 100 
+                ? 'completed' 
+                : agent.status
+            }
+          } catch (e) {
+            return agent
+          }
+        }
+        return agent
+      })
+      
+      setAgents(agentsList)
       setLoading(false)
     } catch (error) {
-      console.error('Failed to load agents:', error)
       setLoading(false)
     }
   }
@@ -30,6 +54,15 @@ function BuyerView() {
   const handleLaunchSuccess = () => {
     loadAgents()
     setIsModalOpen(false)
+  }
+
+  const handleReset = () => {
+    setInventoryData([])
+    // Clear all mock data from localStorage
+    agents.forEach((agent: any) => {
+      localStorage.removeItem(`agent_${agent.id}_mock`)
+    })
+    loadAgents() // Refresh to reset agent states
   }
 
   return (
@@ -53,7 +86,7 @@ function BuyerView() {
           className="btn-primary launch-btn"
           onClick={() => setIsModalOpen(true)}
         >
-          🐵 Launch Agent
+          🐵 Launch Monkey
         </button>
       </div>
 
@@ -65,8 +98,8 @@ function BuyerView() {
             <div className="consumer-launch-section">
               <div className="consumer-launch-card">
                 <div className="launch-icon">🐵</div>
-                <h3>Launch Your Agent</h3>
-                <p>Configure an AI agent to automatically find and purchase data that matches your requirements.</p>
+                <h3>Launch Your Monkey</h3>
+                <p>Configure an AI monkey to automatically find and purchase data that matches your requirements.</p>
               </div>
             </div>
           ) : (
@@ -76,6 +109,7 @@ function BuyerView() {
                   key={agent.id}
                   agent={agent}
                   onRefresh={loadAgents}
+                  onInventoryUpdate={setInventoryData}
                 />
               ))}
             </div>
@@ -85,10 +119,44 @@ function BuyerView() {
 
       {view === 'inventory' && (
         <div className="inventory-content">
-          <div className="empty-state">
-            <div className="empty-icon">🌴</div>
-            <p>No data in inventory yet. Launch an agent to start acquiring data!</p>
-          </div>
+          {inventoryData.length === 0 ? (
+            <div className="empty-state">
+              <div className="empty-icon">🌴</div>
+              <p>No data in inventory yet. Launch an agent to start acquiring data!</p>
+            </div>
+          ) : (
+            <div className="inventory-data-viewer">
+              <div className="inventory-header">
+                <h3>Acquired Data ({inventoryData.length} records)</h3>
+                <button
+                  className="btn-secondary"
+                  onClick={handleReset}
+                >
+                  Reset
+                </button>
+              </div>
+              <div className="csv-table-container">
+                <table className="csv-table">
+                  <thead>
+                    <tr>
+                      {Object.keys(inventoryData[0] || {}).map((key) => (
+                        <th key={key}>{key}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {inventoryData.map((row, idx) => (
+                      <tr key={idx}>
+                        {Object.values(row).map((value: any, colIdx) => (
+                          <td key={colIdx}>{String(value)}</td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

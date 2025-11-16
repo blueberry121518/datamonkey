@@ -1,0 +1,100 @@
+.launch-agent-card-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 80px 24px;
+  min-height: 60vh;
+}
+
+.launch-agent-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 48px;
+  max-width: 600px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  transition: all 0.3s ease;
+}
+
+.launch-agent-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.45);
+  border-color: var(--accent-mint);
+}
+
+.launch-agent-emoji {
+  font-size: 80px;
+  margin-bottom: 24px;
+  display: block;
+  line-height: 1;
+}
+
+.launch-agent-title {
+  font-size: 40px;
+  line-height: 48px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 16px;
+}
+
+.launch-agent-description {
+  font-size: 18px;
+  line-height: 28px;
+  color: var(--text-secondary);
+  margin-bottom: 32px;
+}
+
+.launch-agent-button {
+  background: var(--accent-mint);
+  color: #062a1d;
+  border: 2px solid #5aaa82;
+  border-radius: 999px;
+  padding: 12px 24px;
+  font-weight: 600;
+  font-size: 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.launch-agent-button:hover {
+  background: #8dd4b4;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 30px rgba(120, 200, 160, 0.3);
+}
+
+.launch-agent-button .btn-icon {
+  font-size: 18px;
+}
+
+@media (max-width: 768px) {
+  .launch-agent-card-container {
+    padding: 60px 16px;
+    min-height: 50vh;
+  }
+
+  .launch-agent-card {
+    padding: 32px 24px;
+  }
+
+  .launch-agent-emoji {
+    font-size: 64px;
+    margin-bottom: 20px;
+  }
+
+  .launch-agent-title {
+    font-size: 32px;
+    line-height: 40px;
+  }
+
+  .launch-agent-description {
+    font-size: 16px;
+    line-height: 24px;
+  }
+}
+

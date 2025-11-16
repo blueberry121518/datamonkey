@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import Hero from '../components/Hero'
+import LaunchAgentCard from '../components/LaunchAgentCard'
 import Features from '../components/Features'
 import HowItWorks from '../components/HowItWorks'
 import Marketplace from '../components/Marketplace'
@@ -90,6 +91,9 @@ function Home() {
       />
       <Hero 
         onStartSelling={() => handleNavigateToDashboard('producer')} 
+        onLaunchAgent={() => handleNavigateToDashboard('consumer')} 
+      />
+      <LaunchAgentCard 
         onLaunchAgent={() => handleNavigateToDashboard('consumer')} 
       />
       <Features />

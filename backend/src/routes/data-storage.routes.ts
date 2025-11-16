@@ -6,16 +6,6 @@ const router = Router()
 const dataStorageController = new DataStorageController()
 
 // Protected routes (producer uploads)
-router.post(
-  '/upload',
-  authenticate,
-  dataStorageController.uploadData.bind(dataStorageController)
-)
-router.get(
-  '/count',
-  authenticate,
-  dataStorageController.getDataCount.bind(dataStorageController)
-)
 router.get(
   '/warehouse/stats',
   authenticate,
@@ -26,7 +16,6 @@ router.post(
   authenticate,
   dataStorageController.ensureWarehouseEndpoints.bind(dataStorageController)
 )
-// Deprecated - kept for backwards compatibility
 router.post(
   '/warehouse/create-endpoint',
   authenticate,

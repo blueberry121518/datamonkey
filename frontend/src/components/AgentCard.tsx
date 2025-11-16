@@ -19,9 +19,10 @@ interface AgentCardProps {
     created_at: string
   }
   onRefresh?: () => void
+  onInventoryUpdate?: (data: any[]) => void
 }
 
-function AgentCard({ agent, onRefresh }: AgentCardProps) {
+function AgentCard({ agent, onRefresh, onInventoryUpdate }: AgentCardProps) {
   const [isDetailOpen, setIsDetailOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const { addNotification } = useNotification()
@@ -77,7 +78,6 @@ function AgentCard({ agent, onRefresh }: AgentCardProps) {
         onRefresh()
       }
     } catch (error) {
-      console.error('Failed to delete agent:', error)
       addNotification('error', 'Failed to delete agent')
     } finally {
       setIsDeleting(false)
@@ -159,6 +159,7 @@ function AgentCard({ agent, onRefresh }: AgentCardProps) {
         onClose={() => setIsDetailOpen(false)}
         agentId={agent.id}
         onRefresh={onRefresh}
+        onInventoryUpdate={onInventoryUpdate}
       />
     </>
   )

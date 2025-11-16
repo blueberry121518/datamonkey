@@ -21,7 +21,11 @@ interface NonceData {
 const nonceStore = new Map<string, NonceData>()
 
 // Clean up expired nonces every 5 minutes
-setInterval(() => {
+// Store interval reference for cleanup
+let nonceCleanupInterval: NodeJS.Timeout | null = null
+
+// Initialize cleanup interval
+nonceCleanupInterval = setInterval(() => {
   const now = Date.now()
   for (const [key, data] of nonceStore.entries()) {
     if (data.expiresAt < now) {
@@ -29,6 +33,23 @@ setInterval(() => {
     }
   }
 }, 5 * 60 * 1000)
+
+// Register interval for cleanup (will be added to intervals array by server.ts)
+// Use dynamic import to avoid circular dependency
+import('../server.js').then(({ intervals }) => {
+  if (nonceCleanupInterval) {
+    intervals.push(nonceCleanupInterval)
+  }
+}).catch(() => {
+  // If server.ts hasn't loaded yet, register cleanup on process exit
+  const cleanup = () => {
+    if (nonceCleanupInterval) {
+      clearInterval(nonceCleanupInterval)
+    }
+  }
+  process.once('beforeExit', cleanup)
+  process.once('exit', cleanup)
+})
 
 export class AuthService {
   private walletService: WalletService

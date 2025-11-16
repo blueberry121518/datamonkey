@@ -35,41 +35,25 @@ export class AgentExecutionService {
       return
     }
 
-    console.log(`[AGENT_EXEC_DEBUG] startAgent called for agentId: ${agentId}`)
+    logger.info(`Step 1: Start agent request received - agentId: ${agentId}`)
     
+    logger.info(`Step 2: Fetching agent`)
     let agent = await this.buyerAgentService.getAgent(agentId)
-    
-    console.log(`[AGENT_EXEC_DEBUG] Agent retrieved:`, {
-      agentId: agent.id,
-      buyer_id: agent.buyer_id,
-      wallet_id: agent.wallet_id,
-      wallet_address: agent.wallet_address,
-      hasWalletId: !!agent.wallet_id,
-      hasWalletAddress: !!agent.wallet_address,
-      status: agent.status,
-    })
+    logger.info(`Step 3: Agent retrieved - status: ${agent.status}, hasWalletId: ${!!agent.wallet_id}`)
     
     if (agent.status !== 'active') {
-      console.log(`[AGENT_EXEC_DEBUG] ❌ Agent is not active, status: ${agent.status}`)
-      logger.warn(`Agent ${agentId} is not active, status: ${agent.status}`)
+      logger.info(`Step 4: Agent is not active, status: ${agent.status}, stopping`)
       return
     }
 
     // If agent doesn't have a wallet, try to fix it by using buyer's wallet
     if (!agent.wallet_id) {
-      console.log(`[AGENT_EXEC_DEBUG] ⚠️ Agent ${agentId} does not have a wallet_id - attempting to fix`)
-      logger.warn(`Agent ${agentId} does not have a wallet - attempting to fix`)
+      logger.info(`Step 4: Agent has no wallet_id, attempting to fix`)
       try {
-        console.log(`[AGENT_EXEC_DEBUG] Calling fixAgentWallet for agentId: ${agentId}, buyerId: ${agent.buyer_id}`)
+        logger.info(`Step 5: Fixing agent wallet`)
         // Fix agent wallet (will create buyer wallet if needed)
         agent = await this.buyerAgentService.fixAgentWallet(agentId, agent.buyer_id)
-        console.log(`[AGENT_EXEC_DEBUG] ✅ Wallet fixed:`, {
-          agentId: agent.id,
-          wallet_id: agent.wallet_id,
-          wallet_address: agent.wallet_address,
-          hasWalletId: !!agent.wallet_id,
-        })
-        logger.info(`Fixed wallet for agent ${agentId}`)
+        logger.info(`Step 6: Wallet fixed successfully - walletId: ${agent.wallet_id}`)
         await this.agentActionService.logAction(
           agentId,
           'wallet_fixed',
@@ -77,13 +61,7 @@ export class AgentExecutionService {
           'success'
         )
       } catch (error) {
-        console.error(`[AGENT_EXEC_DEBUG] ❌ Failed to fix wallet:`, {
-          agentId,
-          buyerId: agent.buyer_id,
-          error: error instanceof Error ? error.message : 'Unknown error',
-          stack: error instanceof Error ? error.stack : undefined,
-        })
-        logger.error(`Failed to fix wallet for agent ${agentId}:`, error)
+        logger.info(`Step 5: Failed to fix wallet: ${error instanceof Error ? error.message : 'Unknown error'}`)
         await this.agentActionService.logAction(
           agentId,
           'error',
@@ -93,10 +71,10 @@ export class AgentExecutionService {
         return
       }
     } else {
-      console.log(`[AGENT_EXEC_DEBUG] ✅ Agent has wallet: ${agent.wallet_id}`)
+      logger.info(`Step 4: Agent has wallet - walletId: ${agent.wallet_id}`)
     }
 
-    logger.info(`Starting agent execution: ${agentId}`)
+    logger.info(`Step 7: Starting agent execution`)
     
     await this.agentActionService.logAction(
       agentId,
@@ -110,7 +88,7 @@ export class AgentExecutionService {
       try {
         await this.executeAgentCycle(agentId)
       } catch (error) {
-        logger.error(`Error in agent cycle for ${agentId}:`, error)
+        logger.info(`Step 1: Error in agent cycle: ${error instanceof Error ? error.message : 'Unknown error'}`)
         await this.agentActionService.logAction(
           agentId,
           'error',
@@ -133,6 +111,18 @@ export class AgentExecutionService {
       this.runningAgents.delete(agentId)
       logger.info(`Stopped agent execution: ${agentId}`)
     }
+  }
+
+  /**
+   * Stop all running agents (for graceful shutdown)
+   */
+  stopAllAgents(): void {
+    for (const [agentId, interval] of this.runningAgents.entries()) {
+      clearInterval(interval)
+      logger.info(`Stopped agent execution: ${agentId}`)
+    }
+    this.runningAgents.clear()
+    logger.info(`Stopped all running agents`)
   }
 
   /**
@@ -313,7 +303,7 @@ export class AgentExecutionService {
 
       return []
     } catch (error) {
-      logger.error('Error discovering datasets:', error)
+      logger.info(`Step 1: Error discovering datasets: ${error instanceof Error ? error.message : 'Unknown error'}`)
       return []
     }
   }
@@ -376,7 +366,7 @@ export class AgentExecutionService {
         return null
       }
     } catch (error) {
-      logger.error('Error probing dataset:', error)
+      logger.info(`Step 1: Error probing dataset: ${error instanceof Error ? error.message : 'Unknown error'}`)
       await this.agentActionService.logAction(
         agent.id,
         'error',
@@ -424,7 +414,7 @@ export class AgentExecutionService {
         return null
       }
     } catch (error) {
-      logger.error('Error requesting sample:', error)
+      logger.info(`Step 1: Error requesting sample: ${error instanceof Error ? error.message : 'Unknown error'}`)
       await this.agentActionService.logAction(
         agent.id,
         'error',
@@ -584,7 +574,7 @@ export class AgentExecutionService {
         issues
       }
     } catch (error) {
-      logger.error('Error analyzing quality:', error)
+      logger.info(`Step 1: Error analyzing quality: ${error instanceof Error ? error.message : 'Unknown error'}`)
       await this.agentActionService.logAction(
         agent.id,
         'error',
@@ -692,7 +682,7 @@ export class AgentExecutionService {
         estimatedCost
       }
     } catch (error) {
-      logger.error('Error making decision:', error)
+      logger.info(`Step 1: Error making decision: ${error instanceof Error ? error.message : 'Unknown error'}`)
       return {
         shouldPurchase: false,
         reason: 'Decision making failed',
@@ -832,7 +822,7 @@ export class AgentExecutionService {
         throw new Error(`Unexpected response: ${response.status}`)
       }
     } catch (error) {
-      logger.error('Error purchasing dataset:', error)
+      logger.info(`Step 1: Error purchasing dataset: ${error instanceof Error ? error.message : 'Unknown error'}`)
       await this.agentActionService.logAction(
         agent.id,
         'error',
@@ -861,7 +851,7 @@ export class AgentExecutionService {
         }
       }
     } catch (error) {
-      logger.error('Error starting active agents:', error)
+      logger.info(`Step 1: Error starting active agents: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
 }

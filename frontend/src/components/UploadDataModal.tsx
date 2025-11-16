@@ -142,7 +142,6 @@ function UploadDataModal({ isOpen, onClose }: UploadDataModalProps) {
         }
       } catch (error) {
         addNotification('warning', 'Could not auto-fill fields. Please fill them manually.')
-        console.error('Auto-fill error:', error)
       } finally {
         setIsAutoFilling(false)
       }
@@ -273,8 +272,6 @@ function UploadDataModal({ isOpen, onClose }: UploadDataModalProps) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
       const errorDetails = error instanceof Error ? error.stack : String(error)
       addNotification('error', `Upload failed: ${errorMessage}`)
-      console.error('File upload error:', error)
-      console.error('Error details:', errorDetails)
       
       // If it's an API error, try to extract more details
       if (error && typeof error === 'object' && 'response' in error) {

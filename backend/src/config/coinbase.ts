@@ -6,11 +6,15 @@ if (!process.env.CDP_API_KEY_NAME || !process.env.CDP_API_KEY_SECRET) {
   )
 }
 
-// Initialize Coinbase CDP SDK
-export const coinbase = new Coinbase({
+// Initialize Coinbase CDP SDK using static configure method
+Coinbase.configure({
   apiKeyName: process.env.CDP_API_KEY_NAME,
   privateKey: process.env.CDP_API_KEY_SECRET,
 })
+
+// Export coinbase instance for backward compatibility
+// Note: The SDK is now configured globally, use Wallet.create() directly
+export const coinbase = Coinbase
 
 export const CDP_NETWORK = process.env.CDP_NETWORK || 'base-sepolia'
 export const X402_FACILITATOR_URL =

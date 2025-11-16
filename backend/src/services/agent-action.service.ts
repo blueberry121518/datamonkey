@@ -1,4 +1,5 @@
 import { supabase } from '../config/supabase.js'
+import logger from '../utils/logger.js'
 
 export interface AgentAction {
   id: string
@@ -152,6 +153,113 @@ export class AgentActionService {
     }
 
     return (data || []) as AgentAction[]
+  }
+
+  /**
+   * Get seller stats from agent actions (purchases of seller's datasets)
+   */
+  async getSellerStats(sellerId: string): Promise<{
+    totalSales: number
+    totalRevenue: number
+    totalRecordsSold: number
+    recentSales: Array<{
+      id: string
+      endpoint: string
+      dataset_name: string
+      records: number
+      revenue: number
+      timestamp: string
+    }>
+  }> {
+    // First, get all datasets for this seller
+    const { DatasetService } = await import('./dataset.service.js')
+    const datasetService = new DatasetService()
+    const sellerDatasets = await datasetService.getSellerDatasets(sellerId)
+    const datasetIds = sellerDatasets.map(d => d.id)
+
+    if (datasetIds.length === 0) {
+      return {
+        totalSales: 0,
+        totalRevenue: 0,
+        totalRecordsSold: 0,
+        recentSales: [],
+      }
+    }
+
+    // Get all 'purchase_complete' actions for seller's datasets
+    // This is the definitive action that indicates a successful purchase
+    // Note: We need to query for each dataset_id separately since JSONB filtering with .in() can be tricky
+    const allActions: AgentAction[] = []
+    
+    for (const datasetId of datasetIds) {
+      const { data: actions, error } = await supabase
+        .from('agent_actions')
+        .select('*')
+        .eq('action_type', 'purchase_complete')
+        .eq('status', 'success')
+        .eq('details->>dataset_id', datasetId)
+        .order('created_at', { ascending: false })
+
+      if (error) {
+        logger.error(`Failed to get actions for dataset ${datasetId}: ${error.message}`)
+        continue
+      }
+
+      if (actions) {
+        allActions.push(...actions)
+      }
+    }
+
+    // Sort all actions by created_at descending
+    const purchaseActions = allActions.sort((a, b) => 
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    )
+
+    let totalRevenue = 0
+    let totalRecordsSold = 0
+    const recentSales: Array<{
+      id: string
+      endpoint: string
+      dataset_name: string
+      records: number
+      revenue: number
+      timestamp: string
+    }> = []
+
+    const datasetMap = new Map(sellerDatasets.map(d => [d.id, d]))
+
+    purchaseActions?.forEach((action) => {
+      const details = action.details as Record<string, any>
+      const datasetId = details?.dataset_id
+      const dataset = datasetMap.get(datasetId)
+      
+      if (dataset && details?.amount && details?.quantity) {
+        const amount = parseFloat(details.amount)
+        const quantity = parseInt(details.quantity)
+        
+        totalRevenue += amount
+        totalRecordsSold += quantity
+        
+        recentSales.push({
+          id: action.id,
+          endpoint: dataset.endpoint_path || '',
+          dataset_name: details.dataset_name || dataset.name,
+          records: quantity,
+          revenue: amount,
+          timestamp: action.created_at,
+        })
+      }
+    })
+
+    // Sort by most recent and limit to 10
+    recentSales.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+
+    return {
+      totalSales: purchaseActions?.length || 0,
+      totalRevenue,
+      totalRecordsSold,
+      recentSales: recentSales.slice(0, 10),
+    }
   }
 }
 

@@ -28,7 +28,7 @@ function Hero({ onStartSelling, onLaunchAgent }: HeroProps) {
               Start Selling
               <span className="btn-icon">→</span>
             </button>
-            <button onClick={onLaunchAgent} className="btn-ghost">Launch Agent</button>
+            <button onClick={onLaunchAgent} className="btn-ghost">Launch Monkey</button>
           </div>
         </div>
         <div className="hero-right">

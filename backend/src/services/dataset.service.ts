@@ -151,36 +151,144 @@ export class DatasetService {
       throw new Error(`Failed to create dataset: ${error.message}`)
     }
 
+    // If endpoint was created with structured data (has schema/total_rows),
+    // check if there's unlinked structured data that should be linked to this endpoint
+    if (newDataset.schema && newDataset.total_rows) {
+      logger.info(`[DatasetService] Created structured endpoint ${newDataset.id} - checking for matching warehouse data to link`)
+      
+      // Try to link any existing structured data that matches this endpoint
+      // This helps when data was uploaded before the endpoint was created
+      const { DataStorageService } = await import('./data-storage.service.js')
+      const dataStorageService = new DataStorageService()
+      const categorized = await dataStorageService.getAllSellerDataCategorized(sellerId)
+      
+      // If there's structured data with the same schema/category, link it
+      if (categorized.structured.size > 0) {
+        logger.info(`[DatasetService] Found ${categorized.structured.size} structured data groups - checking for matches`)
+        // For now, we'll let ensureWarehouseEndpoints handle the linking
+        // But we could add logic here to match by schema/category
+      }
+    }
+
     return newDataset as DatasetListing
   }
 
   /**
    * Get all datasets for a seller
+   * Dynamically creates warehouse endpoints from data in seller_data_storage
+   * Structured datasets are stored in dataset_listings
    */
   async getSellerDatasets(sellerId: string): Promise<DatasetListing[]> {
     logger.info(`[DatasetService] getSellerDatasets called for seller: ${sellerId}`)
     
-    const { data, error, count } = await supabase
+    // Get structured datasets from dataset_listings (exclude warehouse endpoints)
+    // Note: We use .or() to handle cases where metadata->>source might be NULL or not 'warehouse'
+    // This ensures all structured endpoints are included, even if they don't have metadata.source set
+    const { data: structuredDatasets, error: structuredError } = await supabase
       .from('dataset_listings')
-      .select('*', { count: 'exact' })
+      .select('*')
       .eq('seller_id', sellerId)
+      .or('metadata->>source.neq.warehouse,metadata->>source.is.null')
       .order('created_at', { ascending: false })
 
-    if (error) {
-      logger.error(`[DatasetService] Error fetching datasets: ${error.message}`)
-      throw new Error(`Failed to fetch datasets: ${error.message}`)
+    if (structuredError) {
+      logger.error(`[DatasetService] Error fetching structured datasets: ${structuredError.message}`)
+      throw new Error(`Failed to fetch datasets: ${structuredError.message}`)
     }
 
-    logger.info(`[DatasetService] Query returned count: ${count}, data length: ${data?.length || 0}`)
-    logger.info(`[DatasetService] Datasets found:`, data ? JSON.stringify(data.map(d => ({ id: d.id, name: d.name, is_active: d.is_active })), null, 2) : 'null')
+    logger.info(`[DatasetService] Query returned ${structuredDatasets?.length || 0} structured datasets`)
+    if (structuredDatasets && structuredDatasets.length > 0) {
+      logger.info(`[DatasetService] Structured datasets:`, JSON.stringify(structuredDatasets.map(d => ({ id: d.id, name: d.name, metadata: d.metadata })), null, 2))
+    }
 
-    return (data || []) as DatasetListing[]
+    const result: DatasetListing[] = []
+
+    // Add structured datasets
+    if (structuredDatasets) {
+      result.push(...(structuredDatasets as DatasetListing[]))
+    }
+
+    // Dynamically create "General Warehouse Data" endpoint if unstructured data exists
+    const { DataStorageService } = await import('./data-storage.service.js')
+    const dataStorageService = new DataStorageService()
+    const categorized = await dataStorageService.getAllSellerDataCategorized(sellerId)
+
+    if (categorized.general.recordCount > 0) {
+      // Dynamically create warehouse endpoint (not stored in database)
+      const autoMetadata = this.autoDetectMetadata(categorized.general.sampleRecords)
+      const warehouseEndpoint: DatasetListing = {
+        id: `warehouse-${sellerId}`, // Virtual ID for warehouse endpoint
+        seller_id: sellerId,
+        name: 'General Warehouse Data',
+        description: `General warehouse data: ${categorized.general.recordCount} records from various categories`,
+        category: 'General',
+        endpoint_path: `/api/datasets/general-warehouse-data-${sellerId.substring(0, 8)}`,
+        type: 'api',
+        price_per_record: 0.001,
+        metadata: { source: 'warehouse' },
+        schema: autoMetadata.schema,
+        total_rows: categorized.general.recordCount,
+        quality_score: autoMetadata.quality_score || 0.8,
+        content_summary: autoMetadata.content_summary || `Dataset with ${categorized.general.recordCount} records`,
+        probe_endpoint: `/api/datasets/general-warehouse-data-${sellerId.substring(0, 8)}/probe`,
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }
+      result.unshift(warehouseEndpoint) // Add warehouse endpoint at the beginning
+    }
+
+    logger.info(`[DatasetService] Found ${structuredDatasets?.length || 0} structured datasets, ${categorized.general.recordCount > 0 ? 1 : 0} warehouse endpoint`)
+
+    return result
   }
 
   /**
    * Get a single dataset by ID
+   * Handles virtual warehouse endpoints (warehouse-{sellerId})
    */
   async getDatasetById(datasetId: string, sellerId?: string): Promise<DatasetListing> {
+    // Check if this is a virtual warehouse endpoint
+    if (datasetId.startsWith('warehouse-')) {
+      const warehouseSellerId = datasetId.replace('warehouse-', '')
+      
+      // If sellerId provided, ensure it matches
+      if (sellerId && warehouseSellerId !== sellerId) {
+        throw new Error('Dataset not found')
+      }
+
+      // Dynamically create warehouse endpoint from data
+      const { DataStorageService } = await import('./data-storage.service.js')
+      const dataStorageService = new DataStorageService()
+      const categorized = await dataStorageService.getAllSellerDataCategorized(warehouseSellerId)
+
+      if (categorized.general.recordCount === 0) {
+        throw new Error('Dataset not found')
+      }
+
+      const autoMetadata = this.autoDetectMetadata(categorized.general.sampleRecords)
+      return {
+        id: datasetId,
+        seller_id: warehouseSellerId,
+        name: 'General Warehouse Data',
+        description: `General warehouse data: ${categorized.general.recordCount} records from various categories`,
+        category: 'General',
+        endpoint_path: `/api/datasets/general-warehouse-data-${warehouseSellerId.substring(0, 8)}`,
+        type: 'api',
+        price_per_record: 0.001,
+        metadata: { source: 'warehouse' },
+        schema: autoMetadata.schema,
+        total_rows: categorized.general.recordCount,
+        quality_score: autoMetadata.quality_score || 0.8,
+        content_summary: autoMetadata.content_summary || `Dataset with ${categorized.general.recordCount} records`,
+        probe_endpoint: `/api/datasets/general-warehouse-data-${warehouseSellerId.substring(0, 8)}/probe`,
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      } as DatasetListing
+    }
+
+    // Regular dataset from database
     let query = supabase.from('dataset_listings').select('*').eq('id', datasetId)
 
     // If sellerId provided, ensure the dataset belongs to the seller
@@ -291,82 +399,5 @@ export class DatasetService {
     }
   }
 
-  /**
-   * Find or create a dataset endpoint for a category
-   * Returns existing endpoint if found, creates new one if not
-   */
-  async findOrCreateEndpointForCategory(
-    sellerId: string,
-    category: string,
-    stats: {
-      recordCount: number
-      sampleRecords: Array<Record<string, any>>
-      fields: string[]
-    },
-    isGeneral: boolean = false
-  ): Promise<DatasetListing> {
-    const name = isGeneral 
-      ? 'General Warehouse Data'
-      : `${category} Dataset`
-
-    // Check if endpoint already exists for this category
-    const { data: existing } = await supabase
-      .from('dataset_listings')
-      .select('*')
-      .eq('seller_id', sellerId)
-      .eq('name', name)
-      .maybeSingle()
-
-    if (existing) {
-      logger.info(`[DatasetService] Found existing endpoint for category: ${category}`)
-      
-      // Update existing endpoint with latest stats
-      const autoMetadata = this.autoDetectMetadata(stats.sampleRecords)
-      const { data: updated, error: updateError } = await supabase
-        .from('dataset_listings')
-        .update({
-          total_rows: stats.recordCount,
-          schema: autoMetadata.schema,
-          quality_score: autoMetadata.quality_score || 0.8,
-          content_summary: autoMetadata.content_summary || `Dataset with ${stats.recordCount} records`,
-          is_active: true,
-          metadata: {
-            ...(existing.metadata as Record<string, any> || {}),
-            source: 'warehouse', // Ensure it's marked as warehouse
-          },
-        })
-        .eq('id', existing.id)
-        .select()
-        .single()
-
-      if (updateError) {
-        logger.error(`[DatasetService] Error updating endpoint: ${updateError.message}`)
-        return existing as DatasetListing
-      }
-
-      return updated as DatasetListing
-    }
-
-    // Create new endpoint
-    logger.info(`[DatasetService] Creating new endpoint for category: ${category}`)
-    const autoMetadata = this.autoDetectMetadata(stats.sampleRecords)
-    
-    return await this.createDataset(sellerId, {
-      name,
-      description: isGeneral 
-        ? `General warehouse data: ${stats.recordCount} records from various categories`
-        : `${category} data: ${stats.recordCount} records`,
-      category: isGeneral ? 'General' : category,
-      type: 'api',
-      price_per_record: 0.001,
-      schema: autoMetadata.schema,
-      total_rows: stats.recordCount,
-      quality_score: autoMetadata.quality_score || 0.8,
-      content_summary: autoMetadata.content_summary || `Dataset with ${stats.recordCount} records`,
-      metadata: {
-        source: 'warehouse', // Mark as warehouse endpoint (unstructured data)
-      },
-    })
-  }
 }
 

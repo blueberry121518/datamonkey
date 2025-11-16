@@ -28,26 +28,8 @@ function Dashboard() {
           setUser(user)
           setIsLoading(false)
           
-          // Automatically ensure endpoints are created when dashboard loads (for existing logged-in users)
-          const ensureEndpointsOnLoad = async () => {
-            try {
-              const ApiClient = (await import('../utils/api')).default
-              const apiClient = new ApiClient()
-              const warehouseStats = await apiClient.getWarehouseStats() as any
-              const stats = warehouseStats?.data || warehouseStats
-              
-              if (stats && stats.recordCount > 0) {
-                console.log('[Dashboard] Dashboard loaded, ensuring endpoints are created...')
-                await apiClient.ensureWarehouseEndpoints()
-                console.log('[Dashboard] Endpoints ensured on dashboard load')
-              }
-            } catch (error) {
-              console.error('[Dashboard] Error ensuring endpoints on load:', error)
-              // Don't block dashboard if endpoint creation fails
-            }
-          }
-          
-          ensureEndpointsOnLoad()
+          // Endpoints are automatically maintained when data is uploaded
+          // No need to call ensureWarehouseEndpoints on page load
           
           // Check if there's an intended view from sessionStorage (after login)
           const intendedView = sessionStorage.getItem('intendedView')
@@ -81,23 +63,8 @@ function Dashboard() {
     setIsLoginOpen(false)
     setIsSignupOpen(false)
     
-    // Automatically ensure endpoints are created when user logs in
-    // This ensures endpoints are up-to-date based on their warehouse data
-    try {
-      const ApiClient = (await import('../utils/api')).default
-      const apiClient = new ApiClient()
-      const warehouseStats = await apiClient.getWarehouseStats() as any
-      const stats = warehouseStats?.data || warehouseStats
-      
-      if (stats && stats.recordCount > 0) {
-        console.log('[Dashboard] User logged in, ensuring endpoints are created...')
-        await apiClient.ensureWarehouseEndpoints()
-        console.log('[Dashboard] Endpoints ensured after login')
-      }
-    } catch (error) {
-      console.error('[Dashboard] Error ensuring endpoints on login:', error)
-      // Don't block login if endpoint creation fails
-    }
+    // Endpoints are automatically maintained when data is uploaded
+    // No need to call ensureWarehouseEndpoints on login
     
     // Check if there's an intended view from sessionStorage
     const intendedView = sessionStorage.getItem('intendedView')

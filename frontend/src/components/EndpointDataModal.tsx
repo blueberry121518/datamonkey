@@ -33,15 +33,40 @@ function EndpointDataModal({ isOpen, onClose, dataset }: EndpointDataModalProps)
     setError(null)
 
     try {
-      // Fetch all data records for this dataset
-      // Use a high limit to get all records (up to 10,000)
-      const limit = 10000
-      const response = await apiClient.request(`/producer/files/records?dataset_listing_id=${dataset.id}&limit=${limit}&offset=0`) as any
-      
-      const records = response?.data?.records || response?.data || []
-      setAllData(Array.isArray(records) ? records : [])
+      // For warehouse endpoints, directly fetch warehouse data
+      if (dataset.id?.startsWith('warehouse-') || dataset.name === 'General Warehouse Data') {
+        // Fetch warehouse stats which includes sample records, but we need all records
+        // So use the sample endpoint with a high limit
+        const limit = 10000
+        const response = await apiClient.getDatasetSample(dataset.id, limit) as any
+        console.log('[EndpointDataModal] Warehouse data response:', response)
+        
+        // apiClient.getDatasetSample already returns the data array directly
+        // Check if response is already an array, or if it has a data property
+        const records = Array.isArray(response) ? response : (response?.data || [])
+        setAllData(records)
+        console.log('[EndpointDataModal] Loaded warehouse records:', records.length)
+      } else {
+        // For structured datasets, fetch using sample endpoint
+        const limit = 10000
+        console.log('[EndpointDataModal] Fetching structured dataset data - datasetId:', dataset.id, 'limit:', limit)
+        const response = await apiClient.getDatasetSample(dataset.id, limit) as any
+        console.log('[EndpointDataModal] Structured dataset response:', response)
+        console.log('[EndpointDataModal] Response type:', typeof response, 'Is array?', Array.isArray(response))
+        
+        // apiClient.getDatasetSample already returns the data array directly
+        // Check if response is already an array, or if it has a data property
+        const records = Array.isArray(response) ? response : (response?.data || [])
+        console.log('[EndpointDataModal] Extracted records:', records.length, records)
+        setAllData(records)
+        console.log('[EndpointDataModal] Loaded structured dataset records:', records.length)
+        
+        if (records.length === 0) {
+          console.warn('[EndpointDataModal] No data found for structured endpoint - dataset may not have data linked to it yet')
+        }
+      }
     } catch (err) {
-      console.error('Failed to load endpoint data:', err)
+      console.error('[EndpointDataModal] Error loading data:', err)
       setError(err instanceof Error ? err.message : 'Failed to load data')
     } finally {
       setLoading(false)
@@ -55,7 +80,6 @@ function EndpointDataModal({ isOpen, onClose, dataset }: EndpointDataModalProps)
       const response = await apiClient.getDatasetInteractions(dataset.id) as any
       setInteractions(response?.data || [])
     } catch (err) {
-      console.error('Failed to load interactions:', err)
     }
   }
 
